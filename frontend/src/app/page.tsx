@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState, FormEvent, useEffect } from "react";
-import { Search, Building2, Home } from "lucide-react";
+import { Search, Home, Menu } from "lucide-react";
+import Image from "next/image";
 import { PropertyData } from "@/types/property";
 import { PropertyCard } from "@/components/PropertyCard";
 import { PropertyModal } from "@/components/PropertyModal";
@@ -86,15 +87,23 @@ export default function Page() {
   return (
     <div className="min-h-screen bg-slate-50 font-sans">
       {/* Header / Hero Section */}
-      <header className="bg-linear-to-r from-blue-900 to-slate-800 text-white pt-16 pb-24 px-4 sm:px-6 lg:px-8">
+      <header className="bg-nawy-gradient text-white pt-12 pb-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-5xl mx-auto text-center">
-          <div className="flex justify-center items-center gap-3 mb-6">
-            <Building2 className="w-10 h-10 text-blue-400" />
-            <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight">
+          <div className="flex justify-center items-center gap-4 mb-4">
+            <div className="p-1.5 rounded-xl transition-all duration-300">
+              <Image
+                src="/nawyestate_logo.jpeg"
+                alt="Nawy Logo"
+                width={48}
+                height={48}
+                className="rounded-lg object-contain"
+              />
+            </div>
+            <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-white drop-shadow-sm">
               Nawy Recommender
             </h1>
           </div>
-          <p className="text-lg md:text-xl text-slate-300 max-w-2xl mx-auto mb-10">
+          <p className="text-base md:text-lg text-slate-100 max-w-2xl mx-auto mb-8 opacity-90 font-medium">
             Find your perfect property in Egypt using AI. Just describe what
             you're looking for in plain English.
           </p>
@@ -102,9 +111,9 @@ export default function Page() {
           {/* Search Bar */}
           <form
             onSubmit={handleSearch}
-            className="relative max-w-2xl mx-auto shadow-xl rounded-full bg-white flex items-center p-1.5 focus-within:ring-4 focus-within:ring-blue-500/30 transition-all"
+            className="relative max-w-2xl mx-auto shadow-2xl rounded-full bg-white flex items-center p-1.5 focus-within:ring-4 focus-within:ring-[#5DBDB6]/30 transition-all border border-slate-100"
           >
-            <div className="pl-4 text-slate-400">
+            <div className="pl-4 text-[#003D6B]">
               <Search className="w-5 h-5" />
             </div>
             <input
@@ -117,7 +126,7 @@ export default function Page() {
             <button
               type="submit"
               disabled={isLoading}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-full font-medium transition-colors disabled:opacity-70 disabled:cursor-not-allowed flex items-center gap-2 text-sm"
+              className="bg-[#003D6B] hover:bg-[#004575] text-white px-8 py-2.5 rounded-full font-bold transition-all disabled:opacity-70 disabled:cursor-not-allowed flex items-center gap-2 text-sm whitespace-nowrap shrink-0 shadow-lg shadow-[#003D6B]/20 active:scale-95"
             >
               {isLoading ? (
                 <>
@@ -185,7 +194,7 @@ export default function Page() {
         {!isLoading && results.length > 0 && (
           <div className="mt-8">
             <div className="flex justify-between items-end mb-6">
-              <h2 className="text-2xl font-bold text-slate-800 pt-8">
+              <h2 className="text-2xl font-extrabold text-[#1A365D] pt-8">
                 Found {results.length} Properties
               </h2>
             </div>

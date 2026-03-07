@@ -40,19 +40,19 @@ export function PropertyModal({
     >
       {/* Main Modal Container */}
       <div
-        className="relative w-full max-w-4xl max-h-[85vh] bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col md:flex-row animate-in fade-in zoom-in-95 duration-200"
+        className="relative w-full max-w-3xl max-h-[80vh] bg-white rounded-xl shadow-2xl overflow-hidden flex flex-col md:flex-row animate-in fade-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-3 right-3 z-20 p-2 bg-white/90 hover:bg-white text-slate-800 rounded-full shadow-sm backdrop-blur-md transition-colors border border-slate-100"
+          className="absolute top-2.5 right-2.5 z-20 p-1.5 bg-white/90 hover:bg-white text-slate-800 rounded-full shadow-sm backdrop-blur-md transition-colors border border-slate-100"
         >
-          <X className="w-4 h-4 sm:w-5 sm:h-5" />
+          <X className="w-4 h-4" />
         </button>
 
         {/* Left Side: Image */}
-        <div className="w-full md:w-[45%] h-56 md:h-auto relative bg-slate-200 shrink-0">
+        <div className="w-full md:w-[40%] h-48 md:h-auto relative bg-slate-200 shrink-0">
           <img
             src={
               property.cover_image ||
@@ -63,39 +63,9 @@ export function PropertyModal({
             className="w-full h-full object-cover"
           />
 
-          {/* Navigation Arrows */}
-          <div className="absolute inset-0 flex items-center justify-between p-3 pointer-events-none z-10">
-            {onPrev ? (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onPrev();
-                }}
-                className="pointer-events-auto p-1.5 sm:p-2 bg-white/90 hover:bg-white text-slate-800 rounded-full shadow-md backdrop-blur-md transition-transform hover:scale-110"
-              >
-                <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6" />
-              </button>
-            ) : (
-              <div />
-            )}
-            {onNext ? (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onNext();
-                }}
-                className="pointer-events-auto p-1.5 sm:p-2 bg-white/90 hover:bg-white text-slate-800 rounded-full shadow-md backdrop-blur-md transition-transform hover:scale-110"
-              >
-                <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6" />
-              </button>
-            ) : (
-              <div />
-            )}
-          </div>
-
           <div className="absolute top-4 left-4 flex gap-2">
             {property.tag && (
-              <span className="bg-blue-600/90 backdrop-blur-sm text-white text-[10px] sm:text-xs uppercase tracking-wider font-bold px-2.5 py-1 rounded-full shadow-sm">
+              <span className="bg-[#E94E3D]/90 backdrop-blur-sm text-white text-[10px] sm:text-xs uppercase tracking-wider font-bold px-2.5 py-1 rounded-full shadow-sm">
                 {property.tag}
               </span>
             )}
@@ -108,7 +78,7 @@ export function PropertyModal({
         </div>
 
         {/* Right Side: Content */}
-        <div className="w-full md:w-[55%] flex flex-col p-5 sm:p-8 overflow-y-auto">
+        <div className="w-full md:w-[60%] flex flex-col p-4 sm:p-6 overflow-y-auto">
           {property.developer_logo && (
             <img
               src={property.developer_logo}
@@ -118,77 +88,77 @@ export function PropertyModal({
             />
           )}
 
-          <h2 className="text-xl font-bold text-slate-800 mb-1.5 pr-8">
+          <h2 className="text-lg font-extrabold text-[#1A365D] mb-1 pr-8 leading-tight">
             {property.property_name || "Unnamed Property"}
           </h2>
 
-          <div className="flex items-center text-slate-500 text-sm mb-5">
-            <MapPin className="w-4 h-4 mr-1.5 shrink-0" />
+          <div className="flex items-center text-slate-500 text-xs mb-4">
+            <MapPin className="w-3.5 h-3.5 mr-1.5 shrink-0" />
             <span>{property.location || "Location unavailable"}</span>
           </div>
 
-          <div className="bg-blue-50/50 p-4 rounded-xl mb-5">
-            <p className="text-xs text-slate-500 mb-1">Asking Price</p>
-            <p className="text-2xl sm:text-3xl font-extrabold text-slate-900">
+          <div className="bg-[#5DBDB6]/5 p-3 rounded-lg mb-4 border border-[#5DBDB6]/10">
+            <p className="text-[10px] text-[#5DBDB6] font-bold uppercase tracking-wider mb-0.5">Asking Price</p>
+            <p className="text-xl sm:text-2xl font-extrabold text-[#1A365D]">
               {property.price ||
                 (property.price_float
                   ? `${property.price_float.toLocaleString()} EGP`
                   : "Price on Request")}
             </p>
             {property.payment_plan && (
-              <p className="text-xs font-medium text-blue-700 mt-2 bg-blue-100 inline-block px-2.5 py-1 rounded-full">
+              <p className="text-[10px] font-semibold text-[#E94E3D] mt-1.5 bg-[#E94E3D]/10 inline-block px-2 py-0.5 rounded-full border border-[#E94E3D]/20">
                 {property.payment_plan}
               </p>
             )}
           </div>
 
-          <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-6">
-            <div className="flex flex-col items-center justify-center p-3 bg-slate-50 rounded-xl border border-slate-100">
-              <Bed className="w-5 h-5 text-blue-500 mb-1.5" />
-              <span className="text-slate-500 text-[10px] sm:text-xs uppercase tracking-wider mb-0.5">
+          <div className="grid grid-cols-3 gap-2 mb-4">
+            <div className="flex flex-col items-center justify-center p-2 bg-[#5DBDB6]/5 rounded-lg border border-[#5DBDB6]/10">
+              <Bed className="w-4 h-4 text-[#5DBDB6] mb-1" />
+              <span className="text-slate-500 text-[9px] uppercase tracking-wider mb-0.5">
                 Beds
               </span>
-              <span className="font-bold text-sm text-slate-800">
+              <span className="font-bold text-xs text-[#1A365D]">
                 {property.Beds || "-"}
               </span>
             </div>
-            <div className="flex flex-col items-center justify-center p-3 bg-slate-50 rounded-xl border border-slate-100">
-              <Bath className="w-5 h-5 text-blue-500 mb-1.5" />
-              <span className="text-slate-500 text-[10px] sm:text-xs uppercase tracking-wider mb-0.5">
+            <div className="flex flex-col items-center justify-center p-2 bg-[#5DBDB6]/5 rounded-lg border border-[#5DBDB6]/10">
+              <Bath className="w-4 h-4 text-[#5DBDB6] mb-1" />
+              <span className="text-slate-500 text-[9px] uppercase tracking-wider mb-0.5">
                 Baths
               </span>
-              <span className="font-bold text-sm text-slate-800">
+              <span className="font-bold text-xs text-[#1A365D]">
                 {property.Baths || "-"}
               </span>
             </div>
-            <div className="flex flex-col items-center justify-center p-3 bg-slate-50 rounded-xl border border-slate-100">
-              <Maximize className="w-5 h-5 text-blue-500 mb-1.5" />
-              <span className="text-slate-500 text-[10px] sm:text-xs uppercase tracking-wider mb-0.5">
+            <div className="flex flex-col items-center justify-center p-2 bg-[#5DBDB6]/5 rounded-lg border border-[#5DBDB6]/10">
+              <Maximize className="w-4 h-4 text-[#5DBDB6] mb-1" />
+              <span className="text-slate-500 text-[9px] uppercase tracking-wider mb-0.5">
                 Area
               </span>
-              <span className="font-bold text-sm text-slate-800">
+              <span className="font-bold text-xs text-[#1A365D]">
                 {property.m2 ? `${property.m2} m²` : "-"}
               </span>
             </div>
           </div>
 
-          <div className="mb-6">
-            <h3 className="font-bold text-slate-800 mb-2 text-base">
+          <div className="mb-4">
+            <h3 className="font-bold text-[#1A365D] mb-1 text-sm">
               Property Details
             </h3>
-            <p className="text-slate-600 leading-relaxed text-sm whitespace-pre-wrap">
+            <p className="text-slate-600 leading-relaxed text-xs whitespace-pre-wrap line-clamp-4">
               {property.description ||
-                "No specific details were provided for this property. Please check the listing directly on Nawy for more information."}
+                "No specific details were provided for this property."}
             </p>
           </div>
 
-          <div className="mt-auto pt-4 border-t border-slate-100">
+          <div className="mt-auto pt-4 border-t border-slate-100 flex flex-col gap-3">
             {property.url_path ? (
               <a
                 href={property.url_path}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center justify-center w-full gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 sm:py-3.5 rounded-xl transition-all shadow-md shadow-blue-500/20 text-sm sm:text-base"
+                className="flex items-center justify-center w-full gap-2 bg-[#003D6B] hover:bg-[#004575] text-white font-bold py-3 sm:py-3.5 rounded-xl transition-all shadow-md shadow-[#003D6B]/20 text-sm sm:text-base active:scale-[0.98]"
               >
                 View Full Details on Nawy{" "}
                 <ExternalLink className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -201,6 +171,27 @@ export function PropertyModal({
                 External Link Unavailable
               </button>
             )}
+
+            {/* Navigation Controls Below Button */}
+            <div className="flex items-center justify-between gap-4">
+              <button
+                onClick={onPrev}
+                disabled={!onPrev}
+                className="flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-lg bg-slate-50 hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed text-[#003D6B] font-bold text-xs transition-colors border border-slate-100"
+              >
+                <ChevronLeft className="w-4 h-4" /> Previous
+              </button>
+              <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">
+                {currentIndex + 1} / {total}
+              </div>
+              <button
+                onClick={onNext}
+                disabled={!onNext}
+                className="flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-lg bg-slate-50 hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed text-[#003D6B] font-bold text-xs transition-colors border border-slate-100"
+              >
+                Next <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         </div>
       </div>

@@ -4,12 +4,12 @@
   --background: #ffffff;
   --foreground: #171717;
 
-  /* Nawy Brand Colors */
-  --nawy-teal: #5dbdb6;
-  --nawy-navy: #003d6b;
-  --nawy-coral: #e94e3d;
-  --nawy-black: #000000;
-  --nawy-white: #ffffff;
+  /* Nawy Brand Colors - Official Hex Codes */
+  --nawy-teal: #5DBDB6;
+  --nawy-navy: #003D6B;
+  --nawy-coral: #E94E3D;
+  --nawy-black: #1A365D; /* Dark Navy for text */
+  --nawy-white: #FFFFFF;
 }
 
 :root {
@@ -35,6 +35,22 @@
 
 body {
   background: var(--background);
-  color: var(--foreground);
+  color: var(--nawy-black);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Nawy Helper Classes */
+.bg-nawy-gradient {
+  background: linear-gradient(135deg, var(--nawy-navy) 0%, #004575 100%);
+}
+
+.text-nawy-navy { color: var(--nawy-navy); }
+.text-nawy-teal { color: var(--nawy-teal); }
+.text-nawy-coral { color: var(--nawy-coral); }
+
+.bg-nawy-teal { background-color: var(--nawy-teal); }
+.bg-nawy-navy { background-color: var(--nawy-navy); }
+.bg-nawy-coral { background-color: var(--nawy-coral); }
+
+.border-nawy-teal { border-color: var(--nawy-teal); }
+.border-nawy-navy { border-color: var(--nawy-navy); }
