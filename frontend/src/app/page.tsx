@@ -103,10 +103,16 @@ export default function Page() {
               Nawy Recommender
             </h1>
           </div>
-          <p className="text-base md:text-lg text-slate-100 max-w-2xl mx-auto mb-8 opacity-90 font-medium">
-            Find your perfect property in Egypt using AI. Just describe what
-            you're looking for in plain English.
-          </p>
+          <div className="relative inline-block px-6 py-3 mt-2 mb-10 rounded-2xl bg-white/5 backdrop-blur-md border border-white/10 shadow-2xl overflow-hidden group">
+            <div className="absolute inset-0 bg-linear-to-r from-[#5DBDB6]/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+            <p className="text-base md:text-lg text-slate-100 max-w-2xl mx-auto relative z-10 font-medium leading-relaxed tracking-wide">
+              Find your <span className="text-[#5DBDB6] font-bold">perfect property</span> in Egypt using <span className="bg-linear-to-r from-[#5DBDB6] to-[#E94E3D] bg-clip-text text-transparent font-extrabold italic">AI</span>.
+              <br />
+              <span className="text-slate-300 text-sm md:text-base font-normal mt-1 block opacity-80">
+                Just describe what you're looking for in plain English.
+              </span>
+            </p>
+          </div>
 
           {/* Search Bar */}
           <form
