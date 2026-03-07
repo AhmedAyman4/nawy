@@ -1,0 +1,209 @@
+import React from "react";
+import {
+  MapPin,
+  Bed,
+  Bath,
+  Maximize,
+  ExternalLink,
+  X,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
+import { PropertyData } from "@/types/property";
+
+export function PropertyModal({
+  property,
+  currentIndex,
+  total,
+  onClose,
+  onNext,
+  onPrev,
+}: {
+  property: PropertyData;
+  currentIndex: number;
+  total: number;
+  onClose: () => void;
+  onNext?: () => void;
+  onPrev?: () => void;
+}) {
+  const handleImageError = (
+    e: React.SyntheticEvent<HTMLImageElement, Event>,
+  ) => {
+    e.currentTarget.src =
+      "https://images.unsplash.com/photo-1560518883-ce09059eeffa?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80";
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/80 backdrop-blur-sm p-4 sm:p-6"
+      onClick={onClose}
+    >
+      {/* Main Modal Container */}
+      <div
+        className="relative w-full max-w-4xl max-h-[85vh] bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col md:flex-row animate-in fade-in zoom-in-95 duration-200"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Close Button */}
+        <button
+          onClick={onClose}
+          className="absolute top-3 right-3 z-20 p-2 bg-white/90 hover:bg-white text-slate-800 rounded-full shadow-sm backdrop-blur-md transition-colors border border-slate-100"
+        >
+          <X className="w-4 h-4 sm:w-5 sm:h-5" />
+        </button>
+
+        {/* Left Side: Image */}
+        <div className="w-full md:w-[45%] h-56 md:h-auto relative bg-slate-200 shrink-0">
+          <img
+            src={
+              property.cover_image ||
+              "https://images.unsplash.com/photo-1560518883-ce09059eeffa?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
+            }
+            alt={property.property_name || "Property"}
+            onError={handleImageError}
+            className="w-full h-full object-cover"
+          />
+
+          {/* Navigation Arrows */}
+          <div className="absolute inset-0 flex items-center justify-between p-3 pointer-events-none z-10">
+            {onPrev ? (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onPrev();
+                }}
+                className="pointer-events-auto p-1.5 sm:p-2 bg-white/90 hover:bg-white text-slate-800 rounded-full shadow-md backdrop-blur-md transition-transform hover:scale-110"
+              >
+                <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6" />
+              </button>
+            ) : (
+              <div />
+            )}
+            {onNext ? (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onNext();
+                }}
+                className="pointer-events-auto p-1.5 sm:p-2 bg-white/90 hover:bg-white text-slate-800 rounded-full shadow-md backdrop-blur-md transition-transform hover:scale-110"
+              >
+                <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6" />
+              </button>
+            ) : (
+              <div />
+            )}
+          </div>
+
+          <div className="absolute top-4 left-4 flex gap-2">
+            {property.tag && (
+              <span className="bg-blue-600/90 backdrop-blur-sm text-white text-[10px] sm:text-xs uppercase tracking-wider font-bold px-2.5 py-1 rounded-full shadow-sm">
+                {property.tag}
+              </span>
+            )}
+          </div>
+
+          {/* Result Counter Overlay */}
+          <div className="absolute bottom-4 left-4 bg-black/60 text-white text-xs font-medium px-2.5 py-1 rounded-full backdrop-blur-md">
+            {currentIndex + 1} / {total}
+          </div>
+        </div>
+
+        {/* Right Side: Content */}
+        <div className="w-full md:w-[55%] flex flex-col p-5 sm:p-8 overflow-y-auto">
+          {property.developer_logo && (
+            <img
+              src={property.developer_logo}
+              alt="Developer"
+              className="h-8 w-auto object-contain mb-3"
+              onError={(e) => (e.currentTarget.style.display = "none")}
+            />
+          )}
+
+          <h2 className="text-xl font-bold text-slate-800 mb-1.5 pr-8">
+            {property.property_name || "Unnamed Property"}
+          </h2>
+
+          <div className="flex items-center text-slate-500 text-sm mb-5">
+            <MapPin className="w-4 h-4 mr-1.5 shrink-0" />
+            <span>{property.location || "Location unavailable"}</span>
+          </div>
+
+          <div className="bg-blue-50/50 p-4 rounded-xl mb-5">
+            <p className="text-xs text-slate-500 mb-1">Asking Price</p>
+            <p className="text-2xl sm:text-3xl font-extrabold text-slate-900">
+              {property.price ||
+                (property.price_float
+                  ? `${property.price_float.toLocaleString()} EGP`
+                  : "Price on Request")}
+            </p>
+            {property.payment_plan && (
+              <p className="text-xs font-medium text-blue-700 mt-2 bg-blue-100 inline-block px-2.5 py-1 rounded-full">
+                {property.payment_plan}
+              </p>
+            )}
+          </div>
+
+          <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-6">
+            <div className="flex flex-col items-center justify-center p-3 bg-slate-50 rounded-xl border border-slate-100">
+              <Bed className="w-5 h-5 text-blue-500 mb-1.5" />
+              <span className="text-slate-500 text-[10px] sm:text-xs uppercase tracking-wider mb-0.5">
+                Beds
+              </span>
+              <span className="font-bold text-sm text-slate-800">
+                {property.Beds || "-"}
+              </span>
+            </div>
+            <div className="flex flex-col items-center justify-center p-3 bg-slate-50 rounded-xl border border-slate-100">
+              <Bath className="w-5 h-5 text-blue-500 mb-1.5" />
+              <span className="text-slate-500 text-[10px] sm:text-xs uppercase tracking-wider mb-0.5">
+                Baths
+              </span>
+              <span className="font-bold text-sm text-slate-800">
+                {property.Baths || "-"}
+              </span>
+            </div>
+            <div className="flex flex-col items-center justify-center p-3 bg-slate-50 rounded-xl border border-slate-100">
+              <Maximize className="w-5 h-5 text-blue-500 mb-1.5" />
+              <span className="text-slate-500 text-[10px] sm:text-xs uppercase tracking-wider mb-0.5">
+                Area
+              </span>
+              <span className="font-bold text-sm text-slate-800">
+                {property.m2 ? `${property.m2} m²` : "-"}
+              </span>
+            </div>
+          </div>
+
+          <div className="mb-6">
+            <h3 className="font-bold text-slate-800 mb-2 text-base">
+              Property Details
+            </h3>
+            <p className="text-slate-600 leading-relaxed text-sm whitespace-pre-wrap">
+              {property.description ||
+                "No specific details were provided for this property. Please check the listing directly on Nawy for more information."}
+            </p>
+          </div>
+
+          <div className="mt-auto pt-4 border-t border-slate-100">
+            {property.url_path ? (
+              <a
+                href={property.url_path}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center w-full gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 sm:py-3.5 rounded-xl transition-all shadow-md shadow-blue-500/20 text-sm sm:text-base"
+              >
+                View Full Details on Nawy{" "}
+                <ExternalLink className="w-4 h-4 sm:w-5 sm:h-5" />
+              </a>
+            ) : (
+              <button
+                disabled
+                className="w-full bg-slate-100 text-slate-400 font-semibold py-3 sm:py-3.5 rounded-xl cursor-not-allowed text-sm sm:text-base"
+              >
+                External Link Unavailable
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
