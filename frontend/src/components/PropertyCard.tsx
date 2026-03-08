@@ -28,7 +28,7 @@ export function PropertyCard({
       className="bg-white rounded-xl shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden border border-slate-100 flex flex-col group text-sm cursor-pointer"
     >
       {/* Image Container */}
-      <div className="relative h-32 overflow-hidden bg-slate-200">
+      <div className="relative h-48 sm:h-32 overflow-hidden bg-slate-200">
         <img
           src={
             property.cover_image ||

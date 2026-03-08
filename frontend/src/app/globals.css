@@ -54,3 +54,21 @@ body {
 
 .border-nawy-teal { border-color: var(--nawy-teal); }
 .border-nawy-navy { border-color: var(--nawy-navy); }
+ 
+/* Custom Elegant Scrollbar */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: var(--nawy-teal);
+}

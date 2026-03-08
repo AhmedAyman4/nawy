@@ -40,7 +40,7 @@ export function PropertyModal({
     >
       {/* Main Modal Container */}
       <div
-        className="relative w-full max-w-3xl max-h-[80vh] bg-white rounded-xl shadow-2xl overflow-hidden flex flex-col md:flex-row animate-in fade-in zoom-in-95 duration-200"
+        className="relative w-full max-w-3xl max-h-[90vh] md:max-h-[80vh] bg-white rounded-2xl md:rounded-xl shadow-2xl overflow-hidden flex flex-col md:flex-row animate-in fade-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Close Button */}
@@ -52,7 +52,7 @@ export function PropertyModal({
         </button>
 
         {/* Left Side: Image */}
-        <div className="w-full md:w-[40%] h-48 md:h-auto relative bg-slate-200 shrink-0">
+        <div className="w-full md:w-[40%] h-56 sm:h-64 md:h-auto relative bg-slate-200 shrink-0">
           <img
             src={
               property.cover_image ||
