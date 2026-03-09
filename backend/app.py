@@ -14,6 +14,9 @@ from langchain_chroma import Chroma
 from langchain_groq import ChatGroq
 from langchain_core.prompts import ChatPromptTemplate
 
+from langchain_core.runnables import RunnablePassthrough, RunnableParallel, RunnableLambda
+from langchain_core.output_parsers import StrOutputParser
+
 # ==========================================
 # 1. Define Pydantic Models for the API
 # ==========================================
@@ -58,6 +61,13 @@ class PaginatedPropertyResponse(BaseModel):
     size: int
     total_pages: int
 
+class ChatRequest(BaseModel):
+    question: str
+
+class CompareRequest(BaseModel):
+    id1: str
+    id2: str
+
 # ==========================================
 # 2. App Lifespan (Startup & Shutdown)
 # ==========================================
@@ -83,6 +93,13 @@ async def lifespan(app: FastAPI):
         persist_directory="./property_recommender_db",
         embedding_function=embeddings
     )
+
+    print("Loading Location Information VectorDB...")
+    app.state.location_vectorstore = Chroma(
+        persist_directory="./location_information_db",
+        embedding_function=embeddings
+    )
+    print("Location VectorDB loaded!")
 
     print("Initializing Groq LLM...")
     groq_api_key = os.environ.get("GROQ_API_KEY")
@@ -375,6 +392,156 @@ async def get_random_properties(request: Request, page: int = 1, size: int = 20)
             "size": size,
             "total_pages": total_pages
         }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/chat/location")
+async def chat_about_location(request: Request, payload: ChatRequest):
+    """
+    RAG-based chat endpoint for answering questions about location information.
+    Uses the location_information_db ChromaDB vectorstore.
+    """
+    try:
+        llm = request.app.state.llm
+        location_vectorstore = request.app.state.location_vectorstore
+
+        if not payload.question.strip():
+            raise HTTPException(status_code=400, detail="Question cannot be empty.")
+
+        retriever = location_vectorstore.as_retriever(search_kwargs={"k": 10})
+
+        location_prompt = ChatPromptTemplate.from_template("""
+Answer the question based ONLY on the following context from location descriptions:
+<context>{context}</context>
+
+Question: {question}
+
+Answer:""")
+
+        def format_docs(docs):
+            return "\n\n".join(doc.page_content for doc in docs)
+
+        retrieved_docs = retriever.invoke(payload.question)
+        context = format_docs(retrieved_docs)
+
+        chain = location_prompt | llm
+
+        response = chain.invoke({
+            "context": context,
+            "question": payload.question
+        })
+
+        return {
+            "question": payload.question,
+            "answer": response.content.strip()
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/compare")
+async def compare_properties(request: Request, payload: CompareRequest):
+    """
+    Compares two properties by ID using property details from the DataFrame
+    and location context from the vectorstore.
+    """
+    try:
+        df = request.app.state.df
+        vectorstore = request.app.state.location_vectorstore
+        llm = request.app.state.llm
+
+        def get_properties_context(id1, id2, dataframe=df):
+            """
+            Takes two string IDs and returns property details as formatted text.
+            """
+            ids = [str(id1), str(id2)]
+            selected_properties = dataframe[dataframe['id'].isin(ids)]
+
+            context_parts = []
+            for _, row in selected_properties.iterrows():
+                prop_text = (
+                    f"Location: {row['location']}\n"
+                    f"Property Name: {row['property_name']}\n"
+                    f"Description: {row['description']}\n"
+                    f"Area: {row['m2']} m2\n"
+                    f"Beds: {row['Beds']}\n"
+                    f"Baths: {row['Baths']}\n"
+                    f"Payment Plan: {row['payment_plan']}\n"
+                    f"Price: {row['price']}"
+                )
+                context_parts.append(prop_text)
+
+            return "\n\n---\n\n".join(context_parts)
+
+        def property_retriever(inputs):
+            """Retrieve property specs from dataframe"""
+            id1 = inputs["id1"]
+            id2 = inputs["id2"]
+            return get_properties_context(id1, id2)
+
+        def location_retriever(inputs):
+            """Retrieve location information from vectorstore"""
+            query = f"locations of properties {inputs['id1']} and {inputs['id2']}"
+            return vectorstore.as_retriever(
+                search_kwargs={"k": 5}
+            ).invoke(query)
+
+        def format_docs(docs):
+            """Convert retrieved docs into text"""
+            return "\n\n".join(doc.page_content for doc in docs)
+
+        multi_context_prompt = ChatPromptTemplate.from_template(
+            """
+You are a real estate expert.
+
+Compare the following two properties and determine which one is better.
+
+<Property_Details>
+{property_context}
+</Property_Details>
+
+<Location_Context>
+{location_context}
+</Location_Context>
+
+Provide a comparison based on just the context above including:
+
+- Property specifications in markdown table format
+- Location advantages
+- Market trends
+- Value for money
+
+Finish with a clear final recommendation explaining which property is better and why.
+
+Answer:
+"""
+        )
+
+        multi_context_chain = (
+            {
+                "property_context": RunnableLambda(property_retriever),
+                "location_context": (RunnableLambda(location_retriever) | format_docs)
+            }
+            | multi_context_prompt
+            | llm
+            | StrOutputParser()
+        )
+
+        result = multi_context_chain.invoke({
+            "id1": payload.id1,
+            "id2": payload.id2
+        })
+
+        return {
+            "id1": payload.id1,
+            "id2": payload.id2,
+            "comparison": result
+        }
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

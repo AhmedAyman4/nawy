@@ -14,4 +14,6 @@ export interface PropertyData {
   developer_logo?: string | null;
   price_float?: number | null;
   property_type?: string | null;
+  isSelectedForCompare?: boolean;
+  onCompareToggle?: (id: string) => void;
 }

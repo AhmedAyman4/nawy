@@ -7,6 +7,9 @@ import { PropertyData } from "@/types/property";
 import { PropertyCard } from "@/components/PropertyCard";
 import { PropertyModal } from "@/components/PropertyModal";
 import { FilterSection, Filters } from "@/components/FilterSection";
+import { CompareModal } from "@/components/CompareModal";
+import { LocationChat } from "@/components/LocationChat";
+import { Scale, X, Trash2, MessageCircle } from "lucide-react";
 
 export type { PropertyData };
 
@@ -27,6 +30,8 @@ export default function Page() {
   });
   const [propertyTypes, setPropertyTypes] = useState<string[]>([]);
   const [locations, setLocations] = useState<string[]>([]);
+  const [selectedForCompare, setSelectedForCompare] = useState<string[]>([]);
+  const [isCompareModalOpen, setIsCompareModalOpen] = useState<boolean>(false);
 
   const API_BASE_URL = "https://ahmed-ayman-nawy-property-recommender.hf.space";
 
@@ -230,6 +235,24 @@ export default function Page() {
     }
   };
 
+  const handleCompareToggle = (id: string) => {
+    setSelectedForCompare((prev) => {
+      if (prev.includes(id)) {
+        return prev.filter((p) => p !== id);
+      }
+      if (prev.length >= 2) {
+        return [prev[0], id];
+      }
+      return [...prev, id];
+    });
+  };
+
+  const clearComparison = () => setSelectedForCompare([]);
+
+  const selectedProperties = React.useMemo(() => {
+    if (!Array.isArray(results)) return [];
+    return results.filter(p => selectedForCompare.includes(p.id.toString()));
+  }, [results, selectedForCompare]);
 
   const filteredResults = React.useMemo(() => {
     if (!Array.isArray(results)) return [];
@@ -396,10 +419,72 @@ export default function Page() {
                 {filteredResults.map((property, idx) => (
                   <PropertyCard
                     key={property.id || idx}
-                    property={property}
+                    property={{
+                        ...property,
+                        isSelectedForCompare: selectedForCompare.includes(property.id.toString()),
+                        onCompareToggle: handleCompareToggle
+                    }}
                     onClick={() => setSelectedIndex(idx)}
                   />
                 ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Floating Compare Bar */}
+        {selectedForCompare.length > 0 && (
+          <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-40 animate-in slide-in-from-bottom-10 duration-500">
+            <div className="bg-white/80 backdrop-blur-xl border border-white/20 shadow-[0_20px_50px_rgba(0,0,0,0.1)] rounded-full px-6 py-4 flex items-center gap-6">
+              <div className="flex -space-x-4 items-center">
+                {selectedProperties.map((p: PropertyData, i: number) => (
+                  <div key={p.id} className="relative group shrink-0">
+                    <div className={`w-12 h-12 rounded-full border-4 border-white overflow-hidden shadow-md transition-transform group-hover:scale-110 z-${20-i}`}>
+                      <img src={p.cover_image || ""} alt="" className="w-full h-full object-cover" />
+                    </div>
+                    <button 
+                        onClick={() => handleCompareToggle(p.id.toString())}
+                        className="absolute -top-1 -right-1 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
+                    >
+                        <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+                {selectedForCompare.length < 2 && (
+                    <div className="w-12 h-12 rounded-full border-4 border-white dashed-border bg-slate-50 flex items-center justify-center text-slate-300">
+                        <Scale className="w-5 h-5" />
+                    </div>
+                )}
+              </div>
+
+              <div className="h-8 w-px bg-slate-200" />
+
+              <div className="flex flex-col">
+                <span className="text-[10px] font-black uppercase tracking-widest text-[#5DBDB6]">
+                    Property Comparison
+                </span>
+                <span className="text-sm font-bold text-[#1A365D]">
+                    {selectedForCompare.length === 1 
+                        ? "Select one more to compare" 
+                        : "Ready to compare properties"}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                    onClick={clearComparison}
+                    className="p-3 text-slate-400 hover:text-red-500 transition-colors"
+                    title="Clear selected"
+                >
+                    <Trash2 className="w-5 h-5" />
+                </button>
+                <button
+                    disabled={selectedForCompare.length < 2}
+                    onClick={() => setIsCompareModalOpen(true)}
+                    className="bg-gradient-to-r from-[#5DBDB6] to-[#003D6B] text-white px-8 py-3 rounded-full font-black text-sm shadow-lg shadow-[#003D6B]/20 transition-all hover:scale-105 active:scale-95 disabled:opacity-50 disabled:grayscale disabled:scale-100 disabled:cursor-not-allowed flex items-center gap-2"
+                >
+                    <Scale className="w-4 h-4" /> Compare Now
+                </button>
               </div>
             </div>
           </div>
@@ -427,6 +512,17 @@ export default function Page() {
           }
         />
       )}
+      {/* Compare Modal */}
+      {isCompareModalOpen && selectedProperties.length === 2 && (
+        <CompareModal
+          property1={selectedProperties[0]}
+          property2={selectedProperties[1]}
+          onClose={() => setIsCompareModalOpen(false)}
+          apiBaseUrl={API_BASE_URL}
+        />
+      )}
+      {/* Location Chat Widget */}
+      <LocationChat apiBaseUrl={API_BASE_URL} />
     </div>
   );
 }

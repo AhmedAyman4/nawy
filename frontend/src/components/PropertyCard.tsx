@@ -22,10 +22,13 @@ export function PropertyCard({
     e.currentTarget.style.display = "none";
   };
 
+  const isSelectedForCompare = property.isSelectedForCompare;
+  const onCompareToggle = property.onCompareToggle;
+
   return (
     <div
       onClick={onClick}
-      className="bg-white rounded-xl shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden border border-slate-100 flex flex-col group text-sm cursor-pointer"
+      className={`relative bg-white rounded-xl shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden border ${isSelectedForCompare ? 'border-[#5DBDB6] ring-2 ring-[#5DBDB6]/20' : 'border-slate-100'} flex flex-col group text-sm cursor-pointer`}
     >
       {/* Image Container */}
       <div className="relative h-48 sm:h-32 overflow-hidden bg-slate-200">
@@ -48,16 +51,30 @@ export function PropertyCard({
           )}
         </div>
 
-        {property.developer_logo && (
-          <div className="absolute top-2 right-2 bg-white/90 backdrop-blur-sm p-1 rounded-md shadow-sm">
-            <img
-              src={property.developer_logo}
-              alt="Developer"
-              className="h-5 w-auto object-contain"
-              onError={handleLogoError}
-            />
-          </div>
-        )}
+        {/* Selection / Compare Toggle Overlay */}
+        <div className="absolute top-2 right-2 flex items-center gap-2">
+            {property.developer_logo && (
+              <div className="bg-white/90 backdrop-blur-sm p-1 rounded-md shadow-sm">
+                <img
+                  src={property.developer_logo}
+                  alt="Developer"
+                  className="h-5 w-auto object-contain"
+                  onError={handleLogoError}
+                />
+              </div>
+            )}
+            
+            <button
+                onClick={(e) => {
+                    e.stopPropagation();
+                    if (onCompareToggle) onCompareToggle(property.id);
+                }}
+                className={`p-1.5 rounded-full backdrop-blur-md shadow-md transition-all duration-300 transform border ${isSelectedForCompare ? 'bg-[#5DBDB6] text-white border-white' : 'bg-white/80 hover:bg-white text-slate-700 border-white/50 hover:scale-110'}`}
+                title={isSelectedForCompare ? "Remove from comparison" : "Add to comparison"}
+            >
+                <Maximize className="w-3.5 h-3.5" />
+            </button>
+        </div>
 
         {/* Price tag anchored to bottom of image */}
         <div className="absolute bottom-0 left-0 w-full bg-linear-to-t from-slate-900/80 to-transparent p-2 pt-6 text-white">
