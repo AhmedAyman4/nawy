@@ -398,9 +398,9 @@ export default function Page() {
 
         {/* Results Grid */}
         {!isLoading && filteredResults.length > 0 && (
-          <div className="mt-8">
+          <div className="mt-14 sm:mt-8">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-              <h2 className="text-2xl font-extrabold text-[#1A365D] pt-8">
+              <h2 className="text-lg font-black text-[#1A365D] pt-4 sm:pt-6">
                 {hasSearched ? `Found ${filteredResults.length} Properties` : `Discover Properties (${filteredResults.length})`}
               </h2>
               {hasSearched && (
@@ -414,8 +414,8 @@ export default function Page() {
               )}
             </div>
 
-            <div className="bg-white rounded-3xl shadow-xl border border-slate-100 p-4 sm:p-6 max-h-[75vh] min-h-[400px] overflow-y-auto custom-scrollbar">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4 sm:gap-6">
+            <div className="bg-white rounded-2xl sm:rounded-3xl shadow-xl border border-slate-100 p-3 sm:p-6 max-h-[75vh] min-h-[400px] overflow-y-auto custom-scrollbar">
+              <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3 sm:gap-6">
                 {filteredResults.map((property, idx) => (
                   <PropertyCard
                     key={property.id || idx}
@@ -434,12 +434,12 @@ export default function Page() {
 
         {/* Floating Compare Bar */}
         {selectedForCompare.length > 0 && (
-          <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-40 animate-in slide-in-from-bottom-10 duration-500">
-            <div className="bg-white/80 backdrop-blur-xl border border-white/20 shadow-[0_20px_50px_rgba(0,0,0,0.1)] rounded-full px-6 py-4 flex items-center gap-6">
-              <div className="flex -space-x-4 items-center">
+          <div className="fixed bottom-4 sm:bottom-8 left-1/2 -translate-x-1/2 z-40 animate-in slide-in-from-bottom-10 duration-500 w-[calc(100%-2rem)] sm:w-auto">
+            <div className="bg-white/90 backdrop-blur-xl border border-white/20 shadow-[0_10px_40px_rgba(0,0,0,0.15)] rounded-2xl sm:rounded-full px-4 sm:px-6 py-3 sm:py-4 flex flex-row items-center gap-3 sm:gap-6">
+              <div className="flex -space-x-3 sm:-space-x-4 items-center shrink-0">
                 {selectedProperties.map((p: PropertyData, i: number) => (
                   <div key={p.id} className="relative group shrink-0">
-                    <div className={`w-12 h-12 rounded-full border-4 border-white overflow-hidden shadow-md transition-transform group-hover:scale-110 z-${20-i}`}>
+                    <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 sm:border-4 border-white overflow-hidden shadow-md transition-transform group-hover:scale-110 z-${20-i}`}>
                       <img src={p.cover_image || ""} alt="" className="w-full h-full object-cover" />
                     </div>
                     <button 
@@ -451,39 +451,39 @@ export default function Page() {
                   </div>
                 ))}
                 {selectedForCompare.length < 2 && (
-                    <div className="w-12 h-12 rounded-full border-4 border-white dashed-border bg-slate-50 flex items-center justify-center text-slate-300">
-                        <Scale className="w-5 h-5" />
+                    <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 sm:border-4 border-white border-dashed bg-slate-50 flex items-center justify-center text-slate-300">
+                        <Scale className="w-4 h-4 sm:w-5 sm:h-5" />
                     </div>
                 )}
               </div>
 
-              <div className="h-8 w-px bg-slate-200" />
+              <div className="hidden xs:block h-8 w-px bg-slate-200" />
 
-              <div className="flex flex-col">
+              <div className="flex flex-col min-w-0 flex-1">
                 <span className="text-[10px] font-black uppercase tracking-widest text-[#5DBDB6]">
                     Property Comparison
                 </span>
-                <span className="text-sm font-bold text-[#1A365D]">
+                <span className="text-xs sm:text-sm font-bold text-[#1A365D] truncate">
                     {selectedForCompare.length === 1 
                         ? "Select one more to compare" 
                         : "Ready to compare properties"}
                 </span>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1 sm:gap-2 shrink-0">
                 <button
                     onClick={clearComparison}
-                    className="p-3 text-slate-400 hover:text-red-500 transition-colors"
+                    className="p-2 sm:p-3 text-slate-300 hover:text-red-500 transition-colors"
                     title="Clear selected"
                 >
-                    <Trash2 className="w-5 h-5" />
+                    <Trash2 className="w-4 h-4 sm:w-5 sm:h-5" />
                 </button>
                 <button
                     disabled={selectedForCompare.length < 2}
                     onClick={() => setIsCompareModalOpen(true)}
-                    className="bg-gradient-to-r from-[#5DBDB6] to-[#003D6B] text-white px-8 py-3 rounded-full font-black text-sm shadow-lg shadow-[#003D6B]/20 transition-all hover:scale-105 active:scale-95 disabled:opacity-50 disabled:grayscale disabled:scale-100 disabled:cursor-not-allowed flex items-center gap-2"
+                    className="bg-gradient-to-r from-[#5DBDB6] to-[#003D6B] text-white px-4 sm:px-8 py-2.5 sm:py-3 rounded-full font-black text-xs sm:text-sm shadow-lg shadow-[#003D6B]/20 transition-all hover:scale-105 active:scale-95 disabled:opacity-50 disabled:grayscale disabled:scale-100 disabled:cursor-not-allowed flex items-center gap-2"
                 >
-                    <Scale className="w-4 h-4" /> Compare Now
+                    <Scale className="w-3 h-3 sm:w-4 sm:h-4" /> <span className="hidden xs:inline">Compare Now</span><span className="xs:hidden">Compare</span>
                 </button>
               </div>
             </div>
@@ -522,7 +522,7 @@ export default function Page() {
         />
       )}
       {/* Location Chat Widget */}
-      <LocationChat apiBaseUrl={API_BASE_URL} />
+      <LocationChat apiBaseUrl={API_BASE_URL} isCompareBarVisible={selectedForCompare.length > 0} />
     </div>
   );
 }

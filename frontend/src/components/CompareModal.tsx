@@ -133,24 +133,24 @@ export function CompareModal({
                   .markdown-content :global(table) {
                     width: 100%;
                     border-collapse: collapse;
-                    margin: 1.5rem 0;
                     border-radius: 1rem;
                     overflow: hidden;
-                    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
                   }
                   .markdown-content :global(th) {
                     background-color: #f8fafc;
-                    padding: 1rem;
+                    padding: 0.75rem;
                     text-align: left;
                     font-weight: 800;
                     color: #1a365d;
                     border-bottom: 2px solid #e2e8f0;
+                    white-space: nowrap;
+                    font-size: 0.8rem;
                   }
                   .markdown-content :global(td) {
-                    padding: 1rem;
+                    padding: 0.75rem;
                     border-bottom: 1px solid #f1f5f9;
                     color: #475569;
-                    font-size: 0.875rem;
+                    font-size: 0.75rem;
                   }
                   .markdown-content :global(tr:last-child td) {
                     border-bottom: none;
@@ -158,14 +158,15 @@ export function CompareModal({
                   .markdown-content :global(h3) {
                     color: #003d6b;
                     font-weight: 900;
-                    font-size: 1.25rem;
-                    margin-top: 2rem;
-                    margin-bottom: 1rem;
+                    font-size: 1.15rem;
+                    margin-top: 1.5rem;
+                    margin-bottom: 0.75rem;
                   }
                   .markdown-content :global(p) {
                     color: #475569;
                     line-height: 1.6;
                     margin-bottom: 1rem;
+                    font-size: 0.875rem;
                   }
                   .markdown-content :global(strong) {
                     color: #1a365d;
@@ -173,15 +174,25 @@ export function CompareModal({
                   }
                   .markdown-content :global(ul) {
                     list-style-type: disc;
-                    padding-left: 1.5rem;
-                    margin-bottom: 1.5rem;
+                    padding-left: 1.25rem;
+                    margin-bottom: 1.25rem;
                   }
                   .markdown-content :global(li) {
-                    margin-bottom: 0.5rem;
+                    margin-bottom: 0.4rem;
                     color: #475569;
+                    font-size: 0.875rem;
                   }
                 `}</style>
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                <ReactMarkdown 
+                    remarkPlugins={[remarkGfm]}
+                    components={{
+                        table: ({node, ...props}) => (
+                          <div className="overflow-x-auto w-full my-6 rounded-xl border border-slate-100 shadow-sm bg-white">
+                            <table className="min-w-full" {...props} />
+                          </div>
+                        )
+                    }}
+                >
                   {comparison}
                 </ReactMarkdown>
               </div>

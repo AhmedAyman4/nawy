@@ -12,9 +12,10 @@ interface Message {
 
 interface LocationChatProps {
   apiBaseUrl: string;
+  isCompareBarVisible?: boolean;
 }
 
-export function LocationChat({ apiBaseUrl }: LocationChatProps) {
+export function LocationChat({ apiBaseUrl, isCompareBarVisible = false }: LocationChatProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [input, setInput] = useState("");
@@ -99,7 +100,7 @@ export function LocationChat({ apiBaseUrl }: LocationChatProps) {
   }
 
   return (
-    <div className="fixed bottom-6 right-6 z-[100] flex flex-col items-end gap-4 pointer-events-none">
+    <div className={`fixed ${isCompareBarVisible ? 'bottom-24 sm:bottom-6' : 'bottom-6'} right-6 z-[100] flex flex-col items-end gap-4 pointer-events-none transition-all duration-500`}>
       {/* Chat Window */}
       {isOpen && (
         <div 

@@ -28,10 +28,10 @@ export function PropertyCard({
   return (
     <div
       onClick={onClick}
-      className={`relative bg-white rounded-xl shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden border ${isSelectedForCompare ? 'border-[#5DBDB6] ring-2 ring-[#5DBDB6]/20' : 'border-slate-100'} flex flex-col group text-sm cursor-pointer`}
+      className={`relative bg-white rounded-xl shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden border ${isSelectedForCompare ? 'border-[#5DBDB6] ring-2 ring-[#5DBDB6]/20' : 'border-slate-100'} flex flex-col group text-sm cursor-pointer active:scale-[0.98]`}
     >
       {/* Image Container */}
-      <div className="relative h-48 sm:h-32 overflow-hidden bg-slate-200">
+      <div className="relative h-40 sm:h-32 overflow-hidden bg-slate-200 shrink-0">
         <img
           src={
             property.cover_image ||
@@ -69,10 +69,10 @@ export function PropertyCard({
                     e.stopPropagation();
                     if (onCompareToggle) onCompareToggle(property.id);
                 }}
-                className={`p-1.5 rounded-full backdrop-blur-md shadow-md transition-all duration-300 transform border ${isSelectedForCompare ? 'bg-[#5DBDB6] text-white border-white' : 'bg-white/80 hover:bg-white text-slate-700 border-white/50 hover:scale-110'}`}
+                className={`p-2 sm:p-1.5 rounded-full backdrop-blur-md shadow-md transition-all duration-300 transform border ${isSelectedForCompare ? 'bg-[#5DBDB6] text-white border-white scale-110' : 'bg-white/90 hover:bg-white text-slate-700 border-white/50 hover:scale-110'}`}
                 title={isSelectedForCompare ? "Remove from comparison" : "Add to comparison"}
             >
-                <Maximize className="w-3.5 h-3.5" />
+                <Maximize className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
             </button>
         </div>
 

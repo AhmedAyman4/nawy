@@ -76,14 +76,38 @@ export function FilterSection({ filters, setFilters, onSearch, propertyTypes = [
     return `${format(filters.minPrice)} - ${format(filters.maxPrice)}`;
   };
 
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+
   const toggleDropdown = (name: string) => {
     setActiveDropdown(activeDropdown === name ? null : name);
     if (name === "location") setLocationSearch("");
   };
 
   return (
-    <div className="max-w-5xl mx-auto mt-8 px-2 animate-in fade-in slide-in-from-top-4 duration-700" ref={dropdownRef}>
-      <div className="bg-white/10 backdrop-blur-md p-1.5 rounded-2xl sm:rounded-full border border-white/20 shadow-2xl flex flex-col md:flex-row items-stretch gap-2">
+    <div className="max-w-5xl mx-auto mt-8 px-4 sm:px-2 animate-in fade-in slide-in-from-top-4 duration-700" ref={dropdownRef}>
+      {/* Mobile Toggle Button */}
+      <div className="md:hidden flex justify-center mb-4">
+        <button
+          type="button"
+          onClick={() => setIsMenuOpen(!isMenuOpen)}
+          className="group relative flex items-center justify-center gap-3 bg-white/10 backdrop-blur-xl border border-white/20 px-8 py-3.5 rounded-2xl text-white font-black shadow-[0_10px_30px_rgba(0,0,0,0.1)] active:scale-95 transition-all w-full sm:w-auto overflow-hidden"
+        >
+          <div className="absolute inset-0 bg-gradient-to-r from-[#5DBDB6]/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+          <ListFilter className={`w-5 h-5 text-[#5DBDB6] transition-transform duration-500 ${isMenuOpen ? 'rotate-90' : ''}`} />
+          <span className="relative z-10 uppercase tracking-widest text-[11px]">{isMenuOpen ? "Close Filters" : "Filter Properties"}</span>
+          {isMenuOpen ? (
+            <ChevronDown className="w-4 h-4 text-white rotate-180 transition-transform" />
+          ) : (
+            <div className="flex gap-1">
+                <span className="w-1 h-1 bg-white/40 rounded-full animate-bounce"></span>
+                <span className="w-1 h-1 bg-white/40 rounded-full animate-bounce [animation-delay:0.2s]"></span>
+                <span className="w-1 h-1 bg-white/40 rounded-full animate-bounce [animation-delay:0.4s]"></span>
+            </div>
+          )}
+        </button>
+      </div>
+
+      <div className={`${isMenuOpen ? 'flex scale-100' : 'hidden md:flex scale-95 opacity-0 md:opacity-100 md:scale-100'} transition-all duration-300 origin-top bg-white/10 backdrop-blur-xl p-2 md:p-1.5 rounded-3xl md:rounded-full border border-white/20 shadow-2xl flex-col md:flex-row items-stretch gap-2.5 md:gap-2`}>
         
         {/* Location Custom Dropdown */}
         <div className="flex-1 relative min-w-[160px]">
