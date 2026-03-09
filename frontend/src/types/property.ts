@@ -13,4 +13,5 @@ export interface PropertyData {
   cover_image?: string | null;
   developer_logo?: string | null;
   price_float?: number | null;
+  property_type?: string | null;
 }
