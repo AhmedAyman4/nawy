@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, FormEvent, useEffect } from "react";
-import { Search, Home, Menu, RefreshCcw } from "lucide-react";
+import { Search, Home, RefreshCcw } from "lucide-react";
 import Image from "next/image";
 import { PropertyData } from "@/types/property";
 import { PropertyCard } from "@/components/PropertyCard";
@@ -32,6 +32,8 @@ export default function Page() {
   const [locations, setLocations] = useState<string[]>([]);
   const [selectedForCompare, setSelectedForCompare] = useState<string[]>([]);
   const [isCompareModalOpen, setIsCompareModalOpen] = useState<boolean>(false);
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const itemsPerPage = 20;
 
   const API_BASE_URL = "https://ahmed-ayman-nawy-property-recommender.hf.space";
 
@@ -144,6 +146,7 @@ export default function Page() {
 
       const data = await response.json();
       setResults(data.data || []);
+      setCurrentPage(1);
     } catch (err: unknown) {
       if (err instanceof Error) {
         setError(err.message || "Failed to fetch recommendations.");
@@ -187,6 +190,7 @@ export default function Page() {
 
       const data = await response.json();
       setResults(data.data || []);
+      setCurrentPage(1);
     } catch (err: any) {
       setError(err.message || "Failed to filter properties.");
       console.error(err);
@@ -218,6 +222,7 @@ export default function Page() {
     setQuery("");
     setHasSearched(false);
     setError(null);
+    setCurrentPage(1);
     setFilters({
       location: "",
       propertyType: "",
@@ -259,29 +264,32 @@ export default function Page() {
     return results;
   }, [results]);
 
+  const totalPages = Math.ceil(filteredResults.length / itemsPerPage);
+  const paginatedResults = React.useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return filteredResults.slice(start, start + itemsPerPage);
+  }, [filteredResults, currentPage]);
+
   return (
     <div className="min-h-screen bg-slate-50 font-sans">
       {/* Header / Hero Section */}
-      <header className="bg-nawy-gradient text-white pt-6 pb-12 px-4 sm:px-6 lg:px-8 shadow-lg relative z-20">
-        <div className="max-w-[1600px] mx-auto">
-          {/* Logo & Title - Top Left Brand Area */}
-          <div className="flex items-center gap-2.5 mb-4">
-            <div className="p-1 rounded-lg bg-white/10 backdrop-blur-sm border border-white/20 shadow-inner">
-              <Image
-                src="/nawyestate_logo.jpeg"
-                alt="Nawy Logo"
-                width={28}
-                height={28}
-                className="rounded-md object-contain"
-              />
-            </div>
-            <h1 className="text-sm md:text-base font-black tracking-tight text-white drop-shadow-md">
-              Nawy <span className="bg-gradient-to-r from-[#5DBDB6] to-[#5DBDB6]/80 bg-clip-text text-transparent">Recommender</span>
-            </h1>
-          </div>
+      <header className="text-white pt-24 pb-12 px-4 sm:px-6 lg:px-8 shadow-2xl relative z-20 min-h-[400px] flex flex-col justify-center">
+        {/* Background Image with Overlay */}
+        <div className="absolute inset-0 z-0 overflow-hidden">
+          <Image
+            src="/luxury_hero.jpg"
+            alt="Luxury Property Background"
+            fill
+            priority
+            className="object-cover object-center"
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-[#003D6B]/90 via-[#003D6B]/60 to-[#003D6B]/80 backdrop-blur-[2px]" />
+        </div>
+        
+        <div className="max-w-[1600px] mx-auto relative z-10 w-full">
 
           <div className="max-w-5xl mx-auto text-center">
-            <div className="inline-block px-4 py-2 mt-0.5 mb-6 rounded-2xl bg-white/5 backdrop-blur-md border border-white/10 shadow-2xl overflow-hidden group">
+            <div className="inline-block px-4 py-1.5 mt-0.5 mb-4 rounded-2xl bg-white/5 backdrop-blur-md border border-white/10 shadow-2xl overflow-hidden group">
               <div className="absolute inset-0 bg-linear-to-r from-[#5DBDB6]/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
               <p className="text-[11px] md:text-sm text-slate-100 max-w-2xl mx-auto relative z-10 font-medium leading-relaxed tracking-wide">
                 Find your <span className="text-[#5DBDB6] font-bold">perfect property</span> in Egypt using <span className="bg-linear-to-r from-[#5DBDB6] to-[#E94E3D] bg-clip-text text-transparent font-extrabold italic">AI</span>.
@@ -340,7 +348,7 @@ export default function Page() {
       </header>
 
       {/* Main Content Area */}
-      <main className="max-w-[1650px] mx-auto px-4 sm:px-6 lg:px-8 -mt-12 pb-20 relative z-10">
+      <main className="max-w-[1650px] mx-auto px-4 sm:px-6 lg:px-8 -mt-8 pb-20 relative z-10">
         <div className="w-full">
         {/* Error State */}
         {error && (
@@ -414,20 +422,91 @@ export default function Page() {
               )}
             </div>
 
-            <div className="bg-white rounded-2xl sm:rounded-3xl shadow-xl border border-slate-100 p-3 sm:p-6 max-h-[75vh] min-h-[400px] overflow-y-auto custom-scrollbar">
-              <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3 sm:gap-6">
-                {filteredResults.map((property, idx) => (
-                  <PropertyCard
-                    key={property.id || idx}
-                    property={{
-                        ...property,
-                        isSelectedForCompare: selectedForCompare.includes(property.id.toString()),
-                        onCompareToggle: handleCompareToggle
-                    }}
-                    onClick={() => setSelectedIndex(idx)}
-                  />
-                ))}
+            <div className="bg-white rounded-2xl sm:rounded-3xl shadow-xl border border-slate-100 p-3 sm:p-8">
+              <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 sm:gap-8">
+                {paginatedResults.map((property, idx) => {
+                  const absoluteIdx = (currentPage - 1) * itemsPerPage + idx;
+                  return (
+                    <PropertyCard
+                      key={property.id || absoluteIdx}
+                      property={{
+                          ...property,
+                          isSelectedForCompare: selectedForCompare.includes(property.id.toString()),
+                          onCompareToggle: handleCompareToggle
+                      }}
+                      onClick={() => setSelectedIndex(absoluteIdx)}
+                    />
+                  );
+                })}
               </div>
+
+              {/* Pagination Controls */}
+              {totalPages > 1 && (
+                <div className="mt-8 pt-6 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4">
+                  <span className="text-[10px] font-extrabold text-slate-300 uppercase tracking-widest">
+                    Page <span className="text-nawy-navy">{currentPage}</span> / {totalPages}
+                  </span>
+                  
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      disabled={currentPage === 1}
+                      onClick={() => {
+                        setCurrentPage(p => Math.max(1, p - 1));
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                      }}
+                      className="w-8 h-8 flex items-center justify-center rounded-lg bg-slate-50 border border-slate-100 text-slate-400 hover:bg-[#5DBDB6] hover:text-white disabled:opacity-30 transition-all text-xs"
+                    >
+                      &larr;
+                    </button>
+                    
+                    <div className="flex items-center gap-1">
+                      {/* Efficient Page Window Logic */}
+                      {Array.from({ length: totalPages }, (_, i) => i + 1)
+                        .filter(page => {
+                          if (totalPages <= 5) return true;
+                          if (page === 1 || page === totalPages) return true;
+                          return Math.abs(page - currentPage) <= 1;
+                        })
+                        .map((page, index, array) => {
+                          const elements = [];
+                          if (index > 0 && page - array[index - 1] > 1) {
+                            elements.push(
+                              <span key={`dots-${page}`} className="text-slate-300 text-[10px] px-1 font-bold">...</span>
+                            );
+                          }
+                          elements.push(
+                            <button
+                              key={page}
+                              onClick={() => {
+                                setCurrentPage(page);
+                                window.scrollTo({ top: 0, behavior: 'smooth' });
+                              }}
+                              className={`w-8 h-8 flex items-center justify-center rounded-lg font-black text-[11px] transition-all border ${
+                                currentPage === page
+                                  ? "bg-nawy-navy text-white border-nawy-navy shadow-md shadow-nawy-navy/10 scale-105"
+                                  : "bg-white text-slate-400 border-slate-100 hover:border-[#5DBDB6] hover:text-[#5DBDB6]"
+                              }`}
+                            >
+                              {page}
+                            </button>
+                          );
+                          return elements;
+                        })}
+                    </div>
+
+                    <button
+                      disabled={currentPage === totalPages}
+                      onClick={() => {
+                        setCurrentPage(p => Math.min(totalPages, p + 1));
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                      }}
+                      className="w-8 h-8 flex items-center justify-center rounded-lg bg-slate-50 border border-slate-100 text-slate-400 hover:bg-[#5DBDB6] hover:text-white disabled:opacity-30 transition-all text-xs"
+                    >
+                      &rarr;
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}

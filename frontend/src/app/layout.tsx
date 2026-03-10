@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { Navbar } from "@/components/Navbar";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -16,7 +17,7 @@ export const metadata: Metadata = {
   title: "Nawy Recommender | Find Your Dream Home in Egypt",
   description: "AI-powered property recommendations for the Egyptian real estate market.",
   icons: {
-    icon: "/nawyestate_logo.jpeg",
+    icon: "/nawy_favicon_rounded.png",
   },
 };
 
@@ -30,6 +31,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
+        <Navbar />
         {children}
       </body>
     </html>

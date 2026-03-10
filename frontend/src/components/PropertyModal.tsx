@@ -40,19 +40,19 @@ export function PropertyModal({
     >
       {/* Main Modal Container */}
       <div
-        className="relative w-full max-w-3xl max-h-[90vh] md:max-h-[80vh] bg-white rounded-2xl md:rounded-xl shadow-2xl overflow-hidden flex flex-col md:flex-row animate-in fade-in zoom-in-95 duration-200"
+        className="relative w-full max-w-[90%] sm:max-w-2xl md:max-w-3xl max-h-[85vh] md:max-h-[80vh] bg-white rounded-3xl md:rounded-xl shadow-2xl overflow-hidden flex flex-col md:flex-row animate-in fade-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-2.5 right-2.5 z-20 p-1.5 bg-white/90 hover:bg-white text-slate-800 rounded-full shadow-sm backdrop-blur-md transition-colors border border-slate-100"
+          className="absolute top-3 right-3 z-20 p-2 bg-white/90 hover:bg-white text-slate-800 rounded-full shadow-lg backdrop-blur-md transition-all border border-slate-100 active:scale-90"
         >
-          <X className="w-4 h-4" />
+          <X className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
         </button>
 
         {/* Left Side: Image */}
-        <div className="w-full md:w-[40%] h-56 sm:h-64 md:h-auto relative bg-slate-200 shrink-0">
+        <div className="w-full md:w-[40%] h-44 sm:h-56 md:h-auto relative bg-slate-200 shrink-0">
           <img
             src={
               property.cover_image ||
@@ -78,7 +78,7 @@ export function PropertyModal({
         </div>
 
         {/* Right Side: Content */}
-        <div className="w-full md:w-[60%] flex flex-col p-4 sm:p-6 overflow-y-auto">
+        <div className="w-full md:w-[60%] flex flex-col p-4 sm:p-5 md:p-6 overflow-y-auto">
           {property.developer_logo && (
             <img
               src={property.developer_logo}
@@ -97,16 +97,16 @@ export function PropertyModal({
             <span>{property.location || "Location unavailable"}</span>
           </div>
 
-          <div className="bg-[#5DBDB6]/5 p-3 rounded-lg mb-4 border border-[#5DBDB6]/10">
-            <p className="text-[10px] text-[#5DBDB6] font-bold uppercase tracking-wider mb-0.5">Asking Price</p>
-            <p className="text-xl sm:text-2xl font-extrabold text-[#1A365D]">
+          <div className="bg-[#5DBDB6]/5 p-2.5 rounded-xl mb-3 border border-[#5DBDB6]/10">
+            <p className="text-[9px] text-[#5DBDB6] font-extrabold uppercase tracking-widest mb-0.5">Asking Price</p>
+            <p className="text-lg sm:text-2xl font-black text-[#1A365D]">
               {property.price ||
                 (property.price_float
                   ? `${property.price_float.toLocaleString()} EGP`
                   : "Price on Request")}
             </p>
             {property.payment_plan && (
-              <p className="text-[10px] font-semibold text-[#E94E3D] mt-1.5 bg-[#E94E3D]/10 inline-block px-2 py-0.5 rounded-full border border-[#E94E3D]/20">
+              <p className="text-[9px] font-bold text-[#E94E3D] mt-1 bg-[#E94E3D]/10 inline-block px-2 py-0.5 rounded-full border border-[#E94E3D]/20">
                 {property.payment_plan}
               </p>
             )}
@@ -158,10 +158,9 @@ export function PropertyModal({
                 href={property.url_path}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center justify-center w-full gap-2 bg-[#003D6B] hover:bg-[#004575] text-white font-bold py-3 sm:py-3.5 rounded-xl transition-all shadow-md shadow-[#003D6B]/20 text-sm sm:text-base active:scale-[0.98]"
+                className="flex items-center justify-center w-full gap-2 bg-[#003D6B] hover:bg-[#004575] text-white font-black py-2.5 sm:py-3 rounded-xl transition-all shadow-lg shadow-[#003D6B]/20 text-xs sm:text-sm active:scale-[0.98]"
               >
-                View Full Details on Nawy{" "}
-                <ExternalLink className="w-4 h-4 sm:w-5 sm:h-5" />
+                View on Nawy <ExternalLink className="w-3.5 h-3.5" />
               </a>
             ) : (
               <button
