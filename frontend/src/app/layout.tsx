@@ -15,10 +15,10 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Nawy Recommender | Find Your Dream Home in Egypt",
+  title: "Property Recommender",
   description: "AI-powered property recommendations for the Egyptian real estate market.",
   icons: {
-    icon: "/nawy_favicon_rounded.png",
+    icon: "/favicon.svg",
   },
 };
 

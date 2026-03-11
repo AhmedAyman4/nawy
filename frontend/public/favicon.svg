@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" fill="none">
+  <!-- Rounded teal background -->
+  <rect width="32" height="32" rx="8" fill="#5DBDB6"/>
+  
+  <!-- Navy Blue Outline for visibility -->
+  <path d="M7 13.5L16 6L25 13.5V24C25 24.5523 24.5523 25 24 25H8C7.44772 25 7 24.5523 7 24V13.5Z" stroke="#003D6B" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M13 25V16H19V25" stroke="#003D6B" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  
+  <!-- Main White Home icon -->
+  <path d="M7 13.5L16 6L25 13.5V24C25 24.5523 24.5523 25 24 25H8C7.44772 25 7 24.5523 7 24V13.5Z" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M13 25V16H19V25" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
