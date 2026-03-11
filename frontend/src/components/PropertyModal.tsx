@@ -116,7 +116,7 @@ export function PropertyModal({
           </div>
 
           <div className="bg-[#5DBDB6]/5 p-2.5 rounded-xl mb-3 border border-[#5DBDB6]/10">
-            <p className="text-[9px] text-[#5DBDB6] font-extrabold uppercase tracking-widest mb-0.5">Asking Price</p>
+            <p className="text-[10px] text-[#5DBDB6] font-extrabold uppercase tracking-widest mb-0.5">Asking Price</p>
             <p className="text-lg sm:text-2xl font-black text-[#1A365D]">
               {property.price ||
                 (property.price_float
@@ -124,7 +124,7 @@ export function PropertyModal({
                   : "Price on Request")}
             </p>
             {property.payment_plan && (
-              <p className="text-[9px] font-bold text-[#E94E3D] mt-1 bg-[#E94E3D]/10 inline-block px-2 py-0.5 rounded-full border border-[#E94E3D]/20">
+              <p className="text-[10px] font-bold text-[#E94E3D] mt-1 bg-[#E94E3D]/10 inline-block px-2 py-0.5 rounded-full border border-[#E94E3D]/20">
                 {property.payment_plan}
               </p>
             )}
@@ -133,7 +133,7 @@ export function PropertyModal({
           <div className="grid grid-cols-3 gap-2 mb-4">
             <div className="flex flex-col items-center justify-center p-2 bg-[#5DBDB6]/5 rounded-lg border border-[#5DBDB6]/10">
               <Bed className="w-4 h-4 text-[#5DBDB6] mb-1" />
-              <span className="text-slate-500 text-[9px] uppercase tracking-wider mb-0.5">
+              <span className="text-slate-500 text-[10px] uppercase tracking-wider mb-0.5">
                 Beds
               </span>
               <span className="font-bold text-xs text-[#1A365D]">
@@ -142,7 +142,7 @@ export function PropertyModal({
             </div>
             <div className="flex flex-col items-center justify-center p-2 bg-[#5DBDB6]/5 rounded-lg border border-[#5DBDB6]/10">
               <Bath className="w-4 h-4 text-[#5DBDB6] mb-1" />
-              <span className="text-slate-500 text-[9px] uppercase tracking-wider mb-0.5">
+              <span className="text-slate-500 text-[10px] uppercase tracking-wider mb-0.5">
                 Baths
               </span>
               <span className="font-bold text-xs text-[#1A365D]">
@@ -151,7 +151,7 @@ export function PropertyModal({
             </div>
             <div className="flex flex-col items-center justify-center p-2 bg-[#5DBDB6]/5 rounded-lg border border-[#5DBDB6]/10">
               <Maximize className="w-4 h-4 text-[#5DBDB6] mb-1" />
-              <span className="text-slate-500 text-[9px] uppercase tracking-wider mb-0.5">
+              <span className="text-slate-500 text-[10px] uppercase tracking-wider mb-0.5">
                 Area
               </span>
               <span className="font-bold text-xs text-[#1A365D]">
@@ -194,7 +194,7 @@ export function PropertyModal({
               <button
                 onClick={onPrev}
                 disabled={!onPrev}
-                className="flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-lg bg-slate-50 hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed text-[#003D6B] font-bold text-xs transition-colors border border-slate-100"
+                className="flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-lg bg-slate-50 hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed text-[#003D6B] font-bold text-sm transition-colors border border-slate-100"
               >
                 <ChevronLeft className="w-4 h-4" /> Previous
               </button>
@@ -204,7 +204,7 @@ export function PropertyModal({
               <button
                 onClick={onNext}
                 disabled={!onNext}
-                className="flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-lg bg-slate-50 hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed text-[#003D6B] font-bold text-xs transition-colors border border-slate-100"
+                className="flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-lg bg-slate-50 hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed text-[#003D6B] font-bold text-sm transition-colors border border-slate-100"
               >
                 Next <ChevronRight className="w-4 h-4" />
               </button>

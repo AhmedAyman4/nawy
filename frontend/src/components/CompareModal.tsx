@@ -70,8 +70,8 @@ export function CompareModal({
               <Scale className="w-6 h-6 text-[#5DBDB6]" />
             </div>
             <div>
-              <h2 className="text-xl font-black tracking-tight">AI Smart Comparison</h2>
-              <p className="text-xs text-slate-300 font-medium">Comparing these two exclusive properties</p>
+              <h2 className="text-lg font-black tracking-tight">AI Smart Comparison</h2>
+              <p className="text-[10px] text-slate-300 font-medium">Comparing these two exclusive properties</p>
             </div>
           </div>
           <button
@@ -144,13 +144,13 @@ export function CompareModal({
                     color: #1a365d;
                     border-bottom: 2px solid #e2e8f0;
                     white-space: nowrap;
-                    font-size: 0.8rem;
+                    font-size: 0.75rem;
                   }
                   .markdown-content :global(td) {
                     padding: 0.75rem;
                     border-bottom: 1px solid #f1f5f9;
                     color: #475569;
-                    font-size: 0.75rem;
+                    font-size: 0.7rem;
                   }
                   .markdown-content :global(tr:last-child td) {
                     border-bottom: none;
@@ -158,7 +158,7 @@ export function CompareModal({
                   .markdown-content :global(h3) {
                     color: #003d6b;
                     font-weight: 900;
-                    font-size: 1.15rem;
+                    font-size: 1rem;
                     margin-top: 1.5rem;
                     margin-bottom: 0.75rem;
                   }
@@ -166,7 +166,7 @@ export function CompareModal({
                     color: #475569;
                     line-height: 1.6;
                     margin-bottom: 1rem;
-                    font-size: 0.875rem;
+                    font-size: 0.8rem;
                   }
                   .markdown-content :global(strong) {
                     color: #1a365d;
@@ -180,7 +180,7 @@ export function CompareModal({
                   .markdown-content :global(li) {
                     margin-bottom: 0.4rem;
                     color: #475569;
-                    font-size: 0.875rem;
+                    font-size: 0.8rem;
                   }
                 `}</style>
                 <ReactMarkdown 
@@ -234,9 +234,9 @@ function PropertyMiniCard({ property, color, label }: { property: PropertyData; 
         <span className="text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 mb-1 inline-block">
           {label}
         </span>
-        <h4 className="font-bold text-[#1A365D] truncate text-sm">{property.property_name || "Property Detail"}</h4>
-        <p className="text-xs text-slate-500 font-medium truncate">{property.location}</p>
-        <p className="text-sm font-black mt-1" style={{ color }}>{property.price || (property.price_float ? `${property.price_float.toLocaleString()} EGP` : "N/A")}</p>
+        <h4 className="font-bold text-[#1A365D] truncate text-xs">{property.property_name || "Property Detail"}</h4>
+        <p className="text-[11px] text-slate-500 font-medium truncate">{property.location}</p>
+        <p className="text-xs font-black mt-1" style={{ color }}>{property.price || (property.price_float ? `${property.price_float.toLocaleString()} EGP` : "N/A")}</p>
       </div>
     </div>
   );

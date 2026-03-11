@@ -2,6 +2,8 @@
  
 @theme {
   --breakpoint-xs: 450px;
+  --font-sans: var(--font-ntr), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-ntr), ui-monospace, SFMono-Regular, monospace;
 }
 
 :root {
@@ -19,8 +21,7 @@
 :root {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+
 
   /* Nawy Brand Color Tokens */
   --color-nawy-teal: var(--nawy-teal);
@@ -40,7 +41,11 @@
 body {
   background: var(--background);
   color: var(--nawy-black);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-ntr), sans-serif;
+}
+
+* {
+  font-family: var(--font-ntr), sans-serif;
 }
 
 /* Nawy Helper Classes */

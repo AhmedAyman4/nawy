@@ -29,7 +29,21 @@ export function LocationChat({ apiBaseUrl, isCompareBarVisible = false }: Locati
   ]);
   const [isLoading, setIsLoading] = useState(false);
   
+  const [isNearFooter, setIsNearFooter] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollPosition = window.innerHeight + window.pageYOffset;
+      const pageHeight = document.documentElement.scrollHeight;
+      // If we are within ~150px of the bottom (where the thin footer is)
+      setIsNearFooter(pageHeight - scrollPosition < 120);
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    handleScroll(); // Initial check
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -99,8 +113,10 @@ export function LocationChat({ apiBaseUrl, isCompareBarVisible = false }: Locati
       ]);
   }
 
+  const bottomOffset = isNearFooter ? (isCompareBarVisible ? 'bottom-40 sm:bottom-44' : 'bottom-32 sm:bottom-36') : (isCompareBarVisible ? 'bottom-20 sm:bottom-24' : 'bottom-6 sm:bottom-8');
+
   return (
-    <div className={`fixed ${isCompareBarVisible ? 'bottom-24 sm:bottom-6' : 'bottom-6'} right-6 z-[100] flex flex-col items-end gap-4 pointer-events-none transition-all duration-500`}>
+    <div className={`fixed ${bottomOffset} right-6 z-[100] flex flex-col items-end gap-4 pointer-events-none transition-all duration-500`}>
       {/* Chat Window */}
       {isOpen && (
         <div 
@@ -233,10 +249,10 @@ export function LocationChat({ apiBaseUrl, isCompareBarVisible = false }: Locati
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          className="pointer-events-auto bg-[#003D6B] hover:bg-[#1A365D] text-white p-5 rounded-3xl shadow-2xl flex items-center justify-center transition-all duration-300 hover:scale-110 active:scale-90 group relative"
+          className="pointer-events-auto bg-[#003D6B] hover:bg-[#1A365D] text-white p-3.5 rounded-2xl shadow-2xl flex items-center justify-center transition-all duration-300 hover:scale-110 active:scale-90 group relative"
         >
-          <div className="absolute -top-1 -right-1 w-4 h-4 bg-[#E94E3D] rounded-full border-2 border-white animate-pulse"></div>
-          <MessageCircle className="w-8 h-8 group-hover:rotate-12 transition-transform" />
+          <div className="absolute -top-1 -right-1 w-3 h-3 bg-[#E94E3D] rounded-full border-2 border-white animate-pulse"></div>
+          <MessageCircle className="w-6 h-6 group-hover:rotate-12 transition-transform" />
         </button>
       )}
     </div>

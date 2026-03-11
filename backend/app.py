@@ -188,10 +188,16 @@ async def filter_properties(request: Request, payload: FilterRequest):
 
         # 3. Beds & Baths Filters
         if payload.Beds is not None:
-            df = df[df['Beds'] >= payload.Beds]
-
+            if payload.Beds >= 5:
+                df = df[df['Beds'] >= payload.Beds]
+            else:
+                df = df[df['Beds'] == payload.Beds]
+        
         if payload.Baths is not None:
-            df = df[df['Baths'] >= payload.Baths]
+            if payload.Baths >= 5:
+                df = df[df['Baths'] >= payload.Baths]
+            else:
+                df = df[df['Baths'] == payload.Baths]
 
         # 4. Price Filters
         if payload.min_price is not None:
@@ -235,125 +241,128 @@ async def filter_properties(request: Request, payload: FilterRequest):
 # ----------------------------------------
 
 
-@app.post("/recommend", response_model=PaginatedPropertyResponse)
+@app.post("/recommend")
 async def get_recommendations(request: Request, payload: QueryRequest):
+    debug_info = {}
     try:
         query = payload.query
         top_k = payload.top_k
         page = payload.page
         size = payload.size
-        
-        # Access state variables initialized during lifespan
+
         df = request.app.state.df
         vectorstore = request.app.state.vectorstore
         llm = request.app.state.llm
 
-        if not query.strip():
-            return {
-                "data": [],
-                "total": 0,
-                "page": page,
-                "size": size,
-                "total_pages": 0
-            }
+        debug_info["query"] = query
+        debug_info["dataframe_total_rows"] = len(df)
 
-        # Step 1: Base Retrieval (Semantic Search)
+        if not query.strip():
+            return {"data": [], "total": 0, "page": page, "size": size, "total_pages": 0, "debug": {"reason": "Empty query"}}
+
+        # Step 1: Semantic Search
         recommendations = vectorstore.similarity_search(query, k=top_k)
-        recommendation_ids = [doc.metadata.get('id') for doc in recommendations if doc.metadata.get('id')]
-        
+        debug_info["vectorstore_hits"] = len(recommendations)
+
+        # Step 2: ID extraction with float normalization
+        recommendation_ids = []
+        raw_ids_sample = []
+        for doc in recommendations:
+            raw_id = doc.metadata.get('id')
+            if raw_id is not None:
+                raw_ids_sample.append(raw_id)
+                # DON'T convert to int — just cast directly to string to preserve leading zeros
+                normalized_id = str(raw_id)
+                recommendation_ids.append(normalized_id)
+
+        debug_info["extracted_ids_count"] = len(recommendation_ids)
+        debug_info["sample_raw_ids"] = raw_ids_sample[:5]
+        debug_info["sample_normalized_ids"] = recommendation_ids[:5]
+        debug_info["sample_df_ids"] = df['id'].head(5).tolist()
+
         if not recommendation_ids:
-            return {
-                "data": [],
-                "total": 0,
-                "page": page,
-                "size": size,
-                "total_pages": 0
-            }
-            
+            return {"data": [], "total": 0, "page": page, "size": size, "total_pages": 0, "debug": {**debug_info, "reason": "No IDs extracted from vectorstore"}}
+
         recommended_df = df[df['id'].isin(recommendation_ids)].copy()
+        debug_info["df_matches_after_id_join"] = len(recommended_df)
 
         if recommended_df.empty:
-            return {
-                "data": [],
-                "total": 0,
-                "page": page,
-                "size": size,
-                "total_pages": 0
-            }
+            return {"data": [], "total": 0, "page": page, "size": size, "total_pages": 0, "debug": {**debug_info, "reason": "ID join returned 0 rows — possible type mismatch between vectorstore and DataFrame IDs"}}
 
-        # Step 2: Run LLM to generate pandas filtering code based on natural language query
+        # Step 3: LLM filter code generation
         columns_str = str(['m2', 'Beds', 'Baths', 'price_float'])
         prompt = ChatPromptTemplate.from_template("""
-        Given this DataFrame info:
-        Columns: {columns}
+        You are a pandas code generator. Your ONLY job is to filter a DataFrame called `recommended_df` by NUMERIC conditions.
         
-        Generate Python pandas code based on just the columns above to this: {query}.
+        Available numeric columns ONLY:
+        {columns}
+        - m2: area in square meters (e.g. 120)
+        - Beds: number of bedrooms (e.g. 3)
+        - Baths: number of bathrooms (e.g. 2)
+        - price_float: price in full EGP — 1 million = 1000000, 10 million = 10000000
+        
+        User query: {query}
+        
         Rules:
-        - Use ONLY the provided columns.
-        - Store the result in a variable called df_filtered.
-        - The output must be a pandas filtering operation on recommended_df.
-        - Return ONLY the raw pandas code on a single line.
-        - DO NOT use markdown formatting, DO NOT use backticks (```), and DO NOT add explanations.
+        - Extract ONLY numeric conditions from the query (price, beds, baths, area).
+        - IGNORE any non-numeric filters like location, property type, or names — these are already handled elsewhere.
+        - If the query has NO numeric conditions, return: df_filtered = recommended_df
+        - Store result in df_filtered.
+        - Output ONLY a single line of raw Python pandas code. No markdown, no backticks, no explanation.
         """)
 
         chain = prompt | llm
-
-        raw_code = chain.invoke({
-            "columns": columns_str,
-            "query": query
-        }).content.strip()
-
+        raw_code = chain.invoke({"columns": columns_str, "query": query}).content.strip()
         code = clean_llm_code(raw_code)
-        print(f"Executing Generated Code:\n{code}")
 
-        exec_locals = {
-            "pd": pd,
-            "recommended_df": recommended_df
-        }
+        debug_info["llm_generated_code"] = code
+
+        exec_locals = {"pd": pd, "recommended_df": recommended_df}
 
         try:
             exec(code, {}, exec_locals)
             df_filtered = exec_locals.get("df_filtered")
-            
+
             if df_filtered is None:
-                raise ValueError("LLM code did not produce 'df_filtered' variable.")
+                debug_info["llm_filter_result"] = "df_filtered was None — falling back"
+                df_filtered = recommended_df
+            elif len(df_filtered) == 0:
+                debug_info["llm_filter_result"] = f"df_filtered was empty after applying code — falling back. price_float sample: {recommended_df['price_float'].dropna().head(5).tolist()}"
+                df_filtered = recommended_df
+            else:
+                debug_info["llm_filter_result"] = f"OK — {len(df_filtered)} rows after filter"
+
         except Exception as exec_error:
-            print(f"Code execution failed: {exec_error}")
+            debug_info["llm_filter_result"] = f"exec() error: {str(exec_error)} — falling back"
             df_filtered = recommended_df
 
-        # Pagination Logic
+        # Pagination
         total_records = len(df_filtered)
         total_pages = math.ceil(total_records / size) if size > 0 else 1
         start_idx = (page - 1) * size
         end_idx = start_idx + size
-        
         df_paginated = df_filtered.iloc[start_idx:end_idx]
 
-        # Step 3: Format Final Response
         cols_to_keep = [
             'id', 'location', 'property_name', 'description',
             'm2', 'Beds', 'Baths', 'payment_plan', 'price', 'tag',
             'url_path', 'cover_image', 'developer_logo', 'price_float', 'property_type'
         ]
-        
         available_cols = [col for col in cols_to_keep if col in df_paginated.columns]
-        df_recommendations_input = df_paginated[available_cols]
-
-        # Convert to dictionary FIRST, then natively replace NaNs with None 
-        # This prevents Pandas from forcing None back into NaN in numeric columns
-        records = df_recommendations_input.to_dict(orient='records')
+        records = df_paginated[available_cols].to_dict(orient='records')
         result_json = [{k: (None if pd.isna(v) else v) for k, v in row.items()} for row in records]
-        
+
         return {
             "data": result_json,
             "total": total_records,
             "page": page,
             "size": size,
-            "total_pages": total_pages
+            "total_pages": total_pages,
+            "debug": debug_info
         }
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail={"error": str(e), "debug": debug_info})
 
 
 @app.get("/properties", response_model=PaginatedPropertyResponse)

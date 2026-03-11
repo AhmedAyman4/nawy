@@ -9,6 +9,7 @@ import { PropertyModal } from "@/components/PropertyModal";
 import { CompareModal } from "@/components/CompareModal";
 import { useFavorites } from "@/context/FavoritesContext";
 import { PropertyData } from "@/types/property";
+import { LocationChat } from "@/components/LocationChat";
 
 export default function FavoritesPage() {
   const { favorites } = useFavorites();
@@ -70,12 +71,12 @@ export default function FavoritesPage() {
             className="inline-flex items-center gap-2 text-white/70 hover:text-white transition-colors mb-4 sm:mb-6 group bg-white/5 backdrop-blur-md px-3 py-1.5 sm:px-4 sm:py-2 rounded-full border border-white/10"
           >
             <ArrowLeft className="w-3 h-3 sm:w-4 sm:h-4 group-hover:-translate-x-1 transition-transform" />
-            <span className="text-[10px] sm:text-sm font-bold uppercase tracking-wider">Back to Discover</span>
+            <span className="text-[9px] sm:text-xs font-bold uppercase tracking-wider">Back to Discover</span>
           </Link>
-          <h1 className="text-3xl sm:text-4xl md:text-5xl font-black mb-3 sm:mb-4 tracking-tight">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-black mb-3 sm:mb-4 tracking-tight">
             Saved <span className="text-[#5DBDB6]">Properties</span>
           </h1>
-          <p className="text-white/70 max-w-2xl mx-auto text-base sm:text-lg leading-relaxed px-4">
+          <p className="text-white/70 max-w-2xl mx-auto text-sm sm:text-base leading-relaxed px-4">
             Your personal collection of dream homes and investment opportunities.
           </p>
         </div>
@@ -88,13 +89,13 @@ export default function FavoritesPage() {
             <div className="w-16 h-16 sm:w-20 sm:h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6">
               <Heart className="w-8 h-8 sm:w-10 sm:h-10 text-slate-300" />
             </div>
-            <h2 className="text-xl sm:text-2xl font-bold text-slate-800">No saved properties yet</h2>
-            <p className="text-slate-500 mt-3 mb-8 max-w-md mx-auto text-sm sm:text-base">
+            <h2 className="text-lg sm:text-xl font-bold text-slate-800">No saved properties yet</h2>
+            <p className="text-slate-500 mt-3 mb-8 max-w-md mx-auto text-xs sm:text-sm">
               Start exploring our premium listings and click the heart icon to save the ones you love.
             </p>
             <Link 
               href="/"
-              className="inline-flex items-center gap-2 bg-[#003D6B] text-white px-6 py-2.5 sm:px-8 sm:py-3 rounded-full font-bold shadow-lg shadow-[#003D6B]/20 hover:scale-105 active:scale-95 transition-all uppercase tracking-widest text-xs sm:text-sm"
+              className="inline-flex items-center gap-2 bg-[#003D6B] text-white px-6 py-2.5 sm:px-8 sm:py-3 rounded-full font-bold shadow-lg shadow-[#003D6B]/20 hover:scale-105 active:scale-95 transition-all uppercase tracking-widest text-[10px] sm:text-xs"
             >
               Start Exploring
             </Link>
@@ -102,7 +103,7 @@ export default function FavoritesPage() {
         ) : (
           <div className="bg-white rounded-2xl sm:rounded-3xl shadow-xl border border-slate-100 p-3 sm:p-8">
             <div className="flex items-center justify-between mb-6 sm:mb-8">
-              <h2 className="text-lg sm:text-xl font-black text-[#1A365D]">
+              <h2 className="text-base sm:text-lg font-black text-[#1A365D]">
                 Collection ({favorites.length})
               </h2>
             </div>
@@ -151,10 +152,10 @@ export default function FavoritesPage() {
               <div className="hidden xs:block h-8 w-px bg-slate-200" />
 
               <div className="flex flex-col min-w-0 flex-1">
-                <span className="text-[10px] font-black uppercase tracking-widest text-[#5DBDB6]">
+                <span className="text-[9px] font-black uppercase tracking-widest text-[#5DBDB6]">
                     Property Comparison
                 </span>
-                <span className="text-xs sm:text-sm font-bold text-[#1A365D] truncate">
+                <span className="text-[10px] sm:text-xs font-bold text-[#1A365D] truncate">
                     {selectedForCompare.length === 1 
                         ? "Select one more to compare" 
                         : "Ready to compare properties"}
@@ -172,7 +173,7 @@ export default function FavoritesPage() {
                 <button
                     disabled={selectedForCompare.length < 2}
                     onClick={() => setIsCompareModalOpen(true)}
-                    className="bg-gradient-to-r from-[#5DBDB6] to-[#003D6B] text-white px-4 sm:px-8 py-2.5 sm:py-3 rounded-full font-black text-xs sm:text-sm shadow-lg shadow-[#003D6B]/20 transition-all hover:scale-105 active:scale-95 disabled:opacity-50 disabled:grayscale disabled:scale-100 disabled:cursor-not-allowed flex items-center gap-2"
+                    className="bg-gradient-to-r from-[#5DBDB6] to-[#003D6B] text-white px-4 sm:px-8 py-2.5 sm:py-3 rounded-full font-black text-[10px] sm:text-xs shadow-lg shadow-[#003D6B]/20 transition-all hover:scale-105 active:scale-95 disabled:opacity-50 disabled:grayscale disabled:scale-100 disabled:cursor-not-allowed flex items-center gap-2"
                 >
                     <Scale className="w-3 h-3 sm:w-4 sm:h-4" /> <span className="hidden xs:inline">Compare Now</span><span className="xs:hidden">Compare</span>
                 </button>
@@ -211,6 +212,8 @@ export default function FavoritesPage() {
           apiBaseUrl={API_BASE_URL}
         />
       )}
+      {/* Location Chat Widget */}
+      <LocationChat apiBaseUrl={API_BASE_URL} isCompareBarVisible={selectedForCompare.length > 0} />
     </div>
   );
 }
