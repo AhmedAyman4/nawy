@@ -1,6 +1,7 @@
 import React from "react";
-import { MapPin, Bed, Bath, Maximize, ExternalLink } from "lucide-react";
+import { MapPin, Bed, Bath, Maximize, ExternalLink, Heart } from "lucide-react";
 import { PropertyData } from "@/types/property";
+import { useFavorites } from "@/context/FavoritesContext";
 
 export function PropertyCard({
   property,
@@ -9,6 +10,9 @@ export function PropertyCard({
   property: PropertyData;
   onClick?: () => void;
 }) {
+  const { toggleFavorite, isFavorite } = useFavorites();
+  const favorited = isFavorite(property.id);
+
   const handleImageError = (
     e: React.SyntheticEvent<HTMLImageElement, Event>,
   ) => {
@@ -67,13 +71,26 @@ export function PropertyCard({
             <button
                 onClick={(e) => {
                     e.stopPropagation();
-                    if (onCompareToggle) onCompareToggle(property.id);
+                    toggleFavorite(property);
                 }}
-                className={`p-2 sm:p-1.5 rounded-full backdrop-blur-md shadow-md transition-all duration-300 transform border ${isSelectedForCompare ? 'bg-[#5DBDB6] text-white border-white scale-110' : 'bg-white/90 hover:bg-white text-slate-700 border-white/50 hover:scale-110'}`}
-                title={isSelectedForCompare ? "Remove from comparison" : "Add to comparison"}
+                className={`p-2 sm:p-1.5 rounded-full backdrop-blur-md shadow-md transition-all duration-300 transform border ${favorited ? 'bg-red-500 text-white border-white scale-110' : 'bg-white/90 hover:bg-white text-slate-700 border-white/50 hover:scale-110'}`}
+                title={favorited ? "Remove from favorites" : "Add to favorites"}
             >
-                <Maximize className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
+                <Heart className={`w-4 h-4 sm:w-3.5 sm:h-3.5 ${favorited ? 'fill-current' : ''}`} />
             </button>
+
+            {onCompareToggle && (
+              <button
+                  onClick={(e) => {
+                      e.stopPropagation();
+                      if (onCompareToggle) onCompareToggle(property.id);
+                  }}
+                  className={`p-2 sm:p-1.5 rounded-full backdrop-blur-md shadow-md transition-all duration-300 transform border ${isSelectedForCompare ? 'bg-[#5DBDB6] text-white border-white scale-110' : 'bg-white/90 hover:bg-white text-slate-700 border-white/50 hover:scale-110'}`}
+                  title={isSelectedForCompare ? "Remove from comparison" : "Add to comparison"}
+              >
+                  <Maximize className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
+              </button>
+            )}
         </div>
 
         {/* Price tag anchored to bottom of image */}

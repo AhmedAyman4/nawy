@@ -8,8 +8,10 @@ import {
   X,
   ChevronLeft,
   ChevronRight,
+  Heart,
 } from "lucide-react";
 import { PropertyData } from "@/types/property";
+import { useFavorites } from "@/context/FavoritesContext";
 
 export function PropertyModal({
   property,
@@ -26,6 +28,9 @@ export function PropertyModal({
   onNext?: () => void;
   onPrev?: () => void;
 }) {
+  const { toggleFavorite, isFavorite } = useFavorites();
+  const favorited = isFavorite(property.id);
+
   const handleImageError = (
     e: React.SyntheticEvent<HTMLImageElement, Event>,
   ) => {
@@ -69,6 +74,19 @@ export function PropertyModal({
                 {property.tag}
               </span>
             )}
+          </div>
+
+          <div className="absolute top-4 right-4 z-20 flex gap-2">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                toggleFavorite(property);
+              }}
+              className={`p-2 rounded-full backdrop-blur-md shadow-lg transition-all duration-300 transform border ${favorited ? 'bg-red-500 text-white border-white scale-110' : 'bg-white/90 hover:bg-white text-slate-700 border-white/50 hover:scale-110'}`}
+              title={favorited ? "Remove from favorites" : "Add to favorites"}
+            >
+              <Heart className={`w-4 h-4 sm:w-5 sm:h-5 ${favorited ? 'fill-current' : ''}`} />
+            </button>
           </div>
 
           {/* Result Counter Overlay */}
