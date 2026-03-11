@@ -33,6 +33,9 @@ export default function Page() {
   const [selectedForCompare, setSelectedForCompare] = useState<string[]>([]);
   const [isCompareModalOpen, setIsCompareModalOpen] = useState<boolean>(false);
   const [currentPage, setCurrentPage] = useState<number>(1);
+  const [totalPages, setTotalPages] = useState<number>(1);
+  const [totalRecords, setTotalRecords] = useState<number>(0);
+  const [currentMode, setCurrentMode] = useState<"initial" | "search" | "filter">("initial");
   const itemsPerPage = 20;
 
   const API_BASE_URL = "https://ahmed-ayman-nawy-property-recommender.hf.space";
@@ -54,43 +57,58 @@ export default function Page() {
     fetchOptions();
   }, []);
 
-  // Fetch initial properties on mount with caching
-  useEffect(() => {
-    const fetchInitialProperties = async () => {
-      // Check session storage cache first
-      const cached = sessionStorage.getItem("nawy_initial_properties");
-      if (cached) {
-        try {
-          const parsed = JSON.parse(cached);
-          setResults(parsed);
-          return;
-        } catch (e) {
-          console.error("Failed to parse cached properties", e);
-        }
+  const loadProperties = async (mode: "initial" | "search" | "filter", page: number) => {
+    setIsLoading(true);
+    setError(null);
+    const size = itemsPerPage;
+
+    try {
+      let response;
+      if (mode === "search") {
+        response = await fetch(`${API_BASE_URL}/recommend`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ query: query, top_k: 150, size, page }),
+        });
+      } else if (mode === "filter") {
+        response = await fetch(`${API_BASE_URL}/filter`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            location: filters.location || null,
+            property_type: filters.propertyType || null,
+            Beds: filters.beds ? parseInt(filters.beds) : null,
+            Baths: filters.baths ? parseInt(filters.baths) : null,
+            min_price: filters.minPrice,
+            max_price: filters.maxPrice,
+            size,
+            page
+          }),
+        });
+      } else {
+        response = await fetch(`${API_BASE_URL}/properties?page=${page}&size=${size}`);
       }
 
-      setIsLoading(true);
-      try {
-        const response = await fetch(`${API_BASE_URL}/properties?size=50`);
-        if (!response.ok) throw new Error("Failed to load initial properties");
-        
-        const data = await response.json();
-        const propertyList = data.data || [];
-        setResults(propertyList);
-        // Cache for the session
-        sessionStorage.setItem("nawy_initial_properties", JSON.stringify(propertyList));
-      } catch (err: any) {
-        console.error("Initial fetch error:", err);
-        // We don't set global error here to not break the search experience
-      } finally {
-        setIsLoading(false);
-      }
-    };
+      if (!response.ok) throw new Error(`API error: ${response.status} ${response.statusText}`);
 
-    if (!hasSearched) {
-      fetchInitialProperties();
+      const data = await response.json();
+      setResults(data.data || []);
+      setTotalPages(data.total_pages || 1);
+      setCurrentPage(data.page || 1);
+      setTotalRecords(data.total || 0);
+
+    } catch (err: any) {
+      setError(err.message || "Failed to load properties.");
+      console.error(err);
+    } finally {
+      setIsLoading(false);
     }
-  }, [hasSearched]);
+  };
+
+  useEffect(() => {
+    loadProperties("initial", 1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Handle keyboard navigation and body scroll lock for modal
   useEffect(() => {
@@ -119,98 +137,21 @@ export default function Page() {
   const handleSearch = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!query.trim()) return;
-
-    setIsLoading(true);
-    setError(null);
     setHasSearched(true);
-
-    try {
-      const response = await fetch(
-        `${API_BASE_URL}/recommend`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            query: query,
-            top_k: 50,
-            size: 50
-          }),
-        },
-      );
-
-      if (!response.ok) {
-        throw new Error(`API error: ${response.status} ${response.statusText}`);
-      }
-
-      const data = await response.json();
-      setResults(data.data || []);
-      setCurrentPage(1);
-    } catch (err: unknown) {
-      if (err instanceof Error) {
-        setError(err.message || "Failed to fetch recommendations.");
-      } else {
-        setError("An unexpected error occurred.");
-      }
-      console.error(err);
-    } finally {
-      setIsLoading(false);
-    }
+    setCurrentMode("search");
+    loadProperties("search", 1);
   };
 
   const handleFilterSearch = async () => {
-    setIsLoading(true);
-    setError(null);
     setHasSearched(true);
-
-    try {
-      const response = await fetch(
-        `${API_BASE_URL}/filter`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            location: filters.location || null,
-            property_type: filters.propertyType || null,
-            Beds: filters.beds ? parseInt(filters.beds) : null,
-            Baths: filters.baths ? parseInt(filters.baths) : null,
-            min_price: filters.minPrice,
-            max_price: filters.maxPrice,
-            size: 50
-          }),
-        },
-      );
-
-      if (!response.ok) {
-        throw new Error(`API error: ${response.status} ${response.statusText}`);
-      }
-
-      const data = await response.json();
-      setResults(data.data || []);
-      setCurrentPage(1);
-    } catch (err: any) {
-      setError(err.message || "Failed to filter properties.");
-      console.error(err);
-    } finally {
-      setIsLoading(false);
-    }
+    setCurrentMode("filter");
+    loadProperties("filter", 1);
   };
 
   const handleQueryChange = (val: string) => {
     setQuery(val);
     if (val.trim()) {
-      // If typing in search, clear all filters
-      setFilters({
-        location: "",
-        propertyType: "",
-        beds: "",
-        baths: "",
-        minPrice: 500000,
-        maxPrice: 25000000,
-      });
+      setFilters({ location: "", propertyType: "", beds: "", baths: "", minPrice: 500000, maxPrice: 25000000 });
     }
   };
 
@@ -222,32 +163,15 @@ export default function Page() {
     setQuery("");
     setHasSearched(false);
     setError(null);
-    setCurrentPage(1);
-    setFilters({
-      location: "",
-      propertyType: "",
-      beds: "",
-      baths: "",
-      minPrice: 500000,
-      maxPrice: 25000000,
-    });
-    
-    const cached = sessionStorage.getItem("nawy_initial_properties");
-    if (cached) {
-      setResults(JSON.parse(cached));
-    } else {
-      window.location.reload(); 
-    }
+    setCurrentMode("initial");
+    setFilters({ location: "", propertyType: "", beds: "", baths: "", minPrice: 500000, maxPrice: 25000000 });
+    loadProperties("initial", 1);
   };
 
   const handleCompareToggle = (id: string) => {
     setSelectedForCompare((prev) => {
-      if (prev.includes(id)) {
-        return prev.filter((p) => p !== id);
-      }
-      if (prev.length >= 2) {
-        return [prev[0], id];
-      }
+      if (prev.includes(id)) return prev.filter((p) => p !== id);
+      if (prev.length >= 2) return [prev[0], id];
       return [...prev, id];
     });
   };
@@ -259,16 +183,11 @@ export default function Page() {
     return results.filter(p => selectedForCompare.includes(p.id.toString()));
   }, [results, selectedForCompare]);
 
-  const filteredResults = React.useMemo(() => {
-    if (!Array.isArray(results)) return [];
-    return results;
-  }, [results]);
-
-  const totalPages = Math.ceil(filteredResults.length / itemsPerPage);
-  const paginatedResults = React.useMemo(() => {
-    const start = (currentPage - 1) * itemsPerPage;
-    return filteredResults.slice(start, start + itemsPerPage);
-  }, [filteredResults, currentPage]);
+  const handlePageChange = (newPage: number) => {
+    if (newPage === currentPage) return;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    loadProperties(currentMode, newPage);
+  };
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans">
@@ -384,7 +303,7 @@ export default function Page() {
         )}
 
         {/* Empty State */}
-        {!isLoading && (hasSearched || results.length > 0) && filteredResults.length === 0 && !error && (
+        {!isLoading && (hasSearched || results.length > 0) && results.length === 0 && !error && (
           <div className="bg-white rounded-2xl shadow-sm p-12 text-center mt-16">
             <Home className="w-16 h-16 text-slate-300 mx-auto mb-4" />
             <h2 className="text-2xl font-semibold text-slate-700">
@@ -405,11 +324,11 @@ export default function Page() {
         )}
 
         {/* Results Grid */}
-        {!isLoading && filteredResults.length > 0 && (
+        {!isLoading && results.length > 0 && (
           <div className="mt-14 sm:mt-8">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
               <h2 className="text-lg font-black text-[#1A365D] pt-4 sm:pt-6">
-                {hasSearched ? `Found ${filteredResults.length} Properties` : `Discover Properties (${filteredResults.length})`}
+                {hasSearched ? `Found ${totalRecords} Properties` : `Discover Properties (${totalRecords})`}
               </h2>
               {hasSearched && (
                 <button
@@ -424,20 +343,17 @@ export default function Page() {
 
             <div className="bg-white rounded-2xl sm:rounded-3xl shadow-xl border border-slate-100 p-3 sm:p-8">
               <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 sm:gap-8">
-                {paginatedResults.map((property, idx) => {
-                  const absoluteIdx = (currentPage - 1) * itemsPerPage + idx;
-                  return (
-                    <PropertyCard
-                      key={property.id || absoluteIdx}
-                      property={{
-                          ...property,
-                          isSelectedForCompare: selectedForCompare.includes(property.id.toString()),
-                          onCompareToggle: handleCompareToggle
-                      }}
-                      onClick={() => setSelectedIndex(absoluteIdx)}
-                    />
-                  );
-                })}
+                {results.map((property, idx) => (
+                  <PropertyCard
+                    key={property.id || idx}
+                    property={{
+                        ...property,
+                        isSelectedForCompare: selectedForCompare.includes(property.id.toString()),
+                        onCompareToggle: handleCompareToggle
+                    }}
+                    onClick={() => setSelectedIndex(idx)}
+                  />
+                ))}
               </div>
 
               {/* Pagination Controls */}
@@ -450,10 +366,7 @@ export default function Page() {
                   <div className="flex items-center gap-1.5">
                     <button
                       disabled={currentPage === 1}
-                      onClick={() => {
-                        setCurrentPage(p => Math.max(1, p - 1));
-                        window.scrollTo({ top: 0, behavior: 'smooth' });
-                      }}
+                      onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
                       className="w-8 h-8 flex items-center justify-center rounded-lg bg-slate-50 border border-slate-100 text-slate-400 hover:bg-[#5DBDB6] hover:text-white disabled:opacity-30 transition-all text-xs"
                     >
                       &larr;
@@ -477,10 +390,7 @@ export default function Page() {
                           elements.push(
                             <button
                               key={page}
-                              onClick={() => {
-                                setCurrentPage(page);
-                                window.scrollTo({ top: 0, behavior: 'smooth' });
-                              }}
+                              onClick={() => handlePageChange(page)}
                               className={`w-8 h-8 flex items-center justify-center rounded-lg font-black text-[11px] transition-all border ${
                                 currentPage === page
                                   ? "bg-nawy-navy text-white border-nawy-navy shadow-md shadow-nawy-navy/10 scale-105"
@@ -496,10 +406,7 @@ export default function Page() {
 
                     <button
                       disabled={currentPage === totalPages}
-                      onClick={() => {
-                        setCurrentPage(p => Math.min(totalPages, p + 1));
-                        window.scrollTo({ top: 0, behavior: 'smooth' });
-                      }}
+                      onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
                       className="w-8 h-8 flex items-center justify-center rounded-lg bg-slate-50 border border-slate-100 text-slate-400 hover:bg-[#5DBDB6] hover:text-white disabled:opacity-30 transition-all text-xs"
                     >
                       &rarr;
@@ -573,14 +480,14 @@ export default function Page() {
       </main>
 
       {/* Modal Overlay */}
-      {selectedIndex !== null && filteredResults[selectedIndex] && (
+      {selectedIndex !== null && results[selectedIndex] && (
         <PropertyModal
-          property={filteredResults[selectedIndex]}
-          currentIndex={selectedIndex}
-          total={filteredResults.length}
+          property={results[selectedIndex]}
+          currentIndex={(currentPage - 1) * itemsPerPage + selectedIndex}
+          total={totalRecords}
           onClose={() => setSelectedIndex(null)}
           onNext={
-            selectedIndex < filteredResults.length - 1
+            selectedIndex < results.length - 1
               ? () => setSelectedIndex(selectedIndex + 1)
               : undefined
           }

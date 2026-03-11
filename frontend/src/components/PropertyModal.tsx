@@ -48,13 +48,27 @@ export function PropertyModal({
         className="relative w-full max-w-[90%] sm:max-w-2xl md:max-w-3xl max-h-[85vh] md:max-h-[80vh] bg-white rounded-3xl md:rounded-xl shadow-2xl overflow-hidden flex flex-col md:flex-row animate-in fade-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Close Button */}
-        <button
-          onClick={onClose}
-          className="absolute top-3 right-3 z-20 p-2 bg-white/90 hover:bg-white text-slate-800 rounded-full shadow-lg backdrop-blur-md transition-all border border-slate-100 active:scale-90"
-        >
-          <X className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-        </button>
+        {/* Action Buttons: Close and Favorite */}
+        <div className="absolute top-3 right-3 z-30 flex gap-2">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              toggleFavorite(property);
+            }}
+            className={`p-2 rounded-full backdrop-blur-md shadow-lg transition-all duration-300 transform border ${favorited ? "bg-red-500 text-white border-white scale-110" : "bg-white/90 hover:bg-white text-slate-800 border-slate-100 hover:scale-110"}`}
+            title={favorited ? "Remove from favorites" : "Add to favorites"}
+          >
+            <Heart
+              className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${favorited ? "fill-current" : ""}`}
+            />
+          </button>
+          <button
+            onClick={onClose}
+            className="p-2 bg-white/90 hover:bg-white text-slate-800 rounded-full shadow-lg backdrop-blur-md transition-all border border-slate-100 active:scale-90"
+          >
+            <X className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+          </button>
+        </div>
 
         {/* Left Side: Image */}
         <div className="w-full md:w-[40%] h-44 sm:h-56 md:h-auto relative bg-slate-200 shrink-0">
@@ -74,19 +88,6 @@ export function PropertyModal({
                 {property.tag}
               </span>
             )}
-          </div>
-
-          <div className="absolute top-4 right-4 z-20 flex gap-2">
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                toggleFavorite(property);
-              }}
-              className={`p-2 rounded-full backdrop-blur-md shadow-lg transition-all duration-300 transform border ${favorited ? 'bg-red-500 text-white border-white scale-110' : 'bg-white/90 hover:bg-white text-slate-700 border-white/50 hover:scale-110'}`}
-              title={favorited ? "Remove from favorites" : "Add to favorites"}
-            >
-              <Heart className={`w-4 h-4 sm:w-5 sm:h-5 ${favorited ? 'fill-current' : ''}`} />
-            </button>
           </div>
 
           {/* Result Counter Overlay */}
