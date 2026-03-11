@@ -51,7 +51,7 @@ export default function FavoritesPage() {
   return (
     <div className="min-h-screen bg-slate-50 font-sans">
       {/* Header Section */}
-      <header className="text-white pt-24 pb-20 px-4 sm:px-6 lg:px-8 shadow-2xl relative z-20 min-h-[350px] flex flex-col justify-center">
+      <header className="text-white pt-20 sm:pt-24 pb-12 sm:pb-20 px-4 sm:px-6 lg:px-8 shadow-2xl relative z-20 min-h-[300px] sm:min-h-[350px] flex flex-col justify-center">
         {/* Background Image with Overlay */}
         <div className="absolute inset-0 z-0 overflow-hidden">
           <Image
@@ -67,47 +67,47 @@ export default function FavoritesPage() {
         <div className="max-w-[1600px] mx-auto relative z-10 w-full text-center">
           <Link 
             href="/" 
-            className="inline-flex items-center gap-2 text-white/70 hover:text-white transition-colors mb-6 group bg-white/5 backdrop-blur-md px-4 py-2 rounded-full border border-white/10"
+            className="inline-flex items-center gap-2 text-white/70 hover:text-white transition-colors mb-4 sm:mb-6 group bg-white/5 backdrop-blur-md px-3 py-1.5 sm:px-4 sm:py-2 rounded-full border border-white/10"
           >
-            <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
-            <span className="text-sm font-bold uppercase tracking-wider">Back to Discover</span>
+            <ArrowLeft className="w-3 h-3 sm:w-4 sm:h-4 group-hover:-translate-x-1 transition-transform" />
+            <span className="text-[10px] sm:text-sm font-bold uppercase tracking-wider">Back to Discover</span>
           </Link>
-          <h1 className="text-4xl md:text-5xl font-black mb-4 tracking-tight">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-black mb-3 sm:mb-4 tracking-tight">
             Saved <span className="text-[#5DBDB6]">Properties</span>
           </h1>
-          <p className="text-white/70 max-w-2xl mx-auto text-lg leading-relaxed">
+          <p className="text-white/70 max-w-2xl mx-auto text-base sm:text-lg leading-relaxed px-4">
             Your personal collection of dream homes and investment opportunities.
           </p>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="max-w-[1650px] mx-auto px-4 sm:px-6 lg:px-8 mt-12 pb-20 relative z-10">
+      <main className="max-w-[1650px] mx-auto px-2 sm:px-6 lg:px-8 mt-6 sm:mt-12 pb-20 relative z-10">
         {favorites.length === 0 ? (
-          <div className="bg-white rounded-3xl shadow-xl p-16 text-center">
-            <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6">
-              <Heart className="w-10 h-10 text-slate-300" />
+          <div className="bg-white rounded-2xl sm:rounded-3xl shadow-xl p-8 sm:p-16 text-center">
+            <div className="w-16 h-16 sm:w-20 sm:h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6">
+              <Heart className="w-8 h-8 sm:w-10 sm:h-10 text-slate-300" />
             </div>
-            <h2 className="text-2xl font-bold text-slate-800">No saved properties yet</h2>
-            <p className="text-slate-500 mt-3 mb-8 max-w-md mx-auto">
+            <h2 className="text-xl sm:text-2xl font-bold text-slate-800">No saved properties yet</h2>
+            <p className="text-slate-500 mt-3 mb-8 max-w-md mx-auto text-sm sm:text-base">
               Start exploring our premium listings and click the heart icon to save the ones you love.
             </p>
             <Link 
               href="/"
-              className="inline-flex items-center gap-2 bg-[#003D6B] text-white px-8 py-3 rounded-full font-bold shadow-lg shadow-[#003D6B]/20 hover:scale-105 active:scale-95 transition-all uppercase tracking-widest text-sm"
+              className="inline-flex items-center gap-2 bg-[#003D6B] text-white px-6 py-2.5 sm:px-8 sm:py-3 rounded-full font-bold shadow-lg shadow-[#003D6B]/20 hover:scale-105 active:scale-95 transition-all uppercase tracking-widest text-xs sm:text-sm"
             >
               Start Exploring
             </Link>
           </div>
         ) : (
-          <div className="bg-white rounded-2xl sm:rounded-3xl shadow-xl border border-slate-100 p-4 sm:p-8">
-            <div className="flex items-center justify-between mb-8">
-              <h2 className="text-xl font-black text-[#1A365D]">
+          <div className="bg-white rounded-2xl sm:rounded-3xl shadow-xl border border-slate-100 p-3 sm:p-8">
+            <div className="flex items-center justify-between mb-6 sm:mb-8">
+              <h2 className="text-lg sm:text-xl font-black text-[#1A365D]">
                 Collection ({favorites.length})
               </h2>
             </div>
             
-            <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 sm:gap-8">
+            <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 sm:gap-8">
               {favorites.map((property, idx) => (
                 <PropertyCard
                   key={property.id}
