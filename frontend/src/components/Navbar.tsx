@@ -53,15 +53,15 @@ export const Navbar: React.FC = () => {
         }`}
       >
         <div className="px-5 h-14 flex items-center justify-between relative">
-          <Link href="/" className="flex items-center gap-3 shrink-0 relative z-10 px-2 py-1 rounded-full transition-all hover:bg-[#5DBDB6]/10 group">
+          <Link href="/" className="flex items-center gap-2 shrink-0 relative z-10 px-1.5 py-1 rounded-full transition-all hover:bg-[#5DBDB6]/10 group">
             <Image
               src="/favicon.svg"
               alt="Property Recommender"
-              width={24}
-              height={24}
-              className="rounded-lg transition-transform group-hover:scale-110 shadow-sm shadow-[#5DBDB6]/20"
+              width={18}
+              height={18}
+              className="rounded-md transition-transform group-hover:scale-110 shadow-sm shadow-[#5DBDB6]/20"
             />
-            <span className="text-sm font-black text-[#003D6B]">Property <span className="text-[#5DBDB6]">Recommender</span></span>
+            <span className="text-xs font-black text-[#003D6B]">Property <span className="text-[#5DBDB6]">Recommender</span></span>
           </Link>
           
           {/* Desktop Centered Links */}
