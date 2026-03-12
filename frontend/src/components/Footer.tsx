@@ -22,10 +22,6 @@ export const Footer: React.FC = () => {
               </div>
               <span className="text-[11px] sm:text-xs font-black text-white tracking-tight">Property <span className="text-[#5DBDB6]">Recommender</span></span>
             </Link>
-            <div className="hidden sm:block h-3 w-px bg-white/10" />
-            <p className="text-[9px] sm:text-[10px] text-white/30 font-bold uppercase tracking-widest">
-              © {new Date().getFullYear()} Nawy
-            </p>
           </div>
 
           {/* Attribution - Centered */}

@@ -68,6 +68,22 @@ class CompareRequest(BaseModel):
     id1: str
     id2: str
 
+class PricePredictionRequest(BaseModel):
+    location: str
+    property_type: str
+    m2: float
+    Beds: float
+    Baths: float
+
+class PricePredictionResponse(BaseModel):
+    location: str
+    property_type: str
+    m2: float
+    Beds: float
+    Baths: float
+    predicted_price_egp: float
+    predicted_price_formatted: str
+    
 # ==========================================
 # 2. App Lifespan (Startup & Shutdown)
 # ==========================================
@@ -150,6 +166,48 @@ def clean_llm_code(raw_code: str) -> str:
 async def root():
     return {"message": "Property Recommender API running"}
 
+@app.get("/ping")
+async def ping_pong():
+    return {"ping": "pong"}
+
+@app.get("/properties", response_model=PaginatedPropertyResponse)
+async def get_random_properties(request: Request, page: int = 1, size: int = 20):
+    try:
+        df = request.app.state.df
+
+        # Use a fixed random state to ensure pagination returns consistent results
+        # while still showing a shuffled selection of properties.
+        random_df = df.sample(frac=1, random_state=42)
+
+        # Pagination Logic
+        total_records = len(random_df)
+        total_pages = math.ceil(total_records / size) if size > 0 else 1
+        start_idx = (page - 1) * size
+        end_idx = start_idx + size
+        
+        df_paginated = random_df.iloc[start_idx:end_idx]
+
+        cols_to_keep = [
+            'id', 'location', 'property_name', 'description',
+            'm2', 'Beds', 'Baths', 'payment_plan', 'price', 'tag',
+            'url_path', 'cover_image', 'developer_logo', 'price_float', 'property_type'
+        ]
+
+        available_cols = [col for col in cols_to_keep if col in df_paginated.columns]
+
+        # Convert to dictionary FIRST, then natively replace NaNs with None 
+        records = df_paginated[available_cols].to_dict(orient="records")
+        result_json = [{k: (None if pd.isna(v) else v) for k, v in row.items()} for row in records]
+
+        return {
+            "data": result_json,
+            "total": total_records,
+            "page": page,
+            "size": size,
+            "total_pages": total_pages
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 # --- NEW ENDPOINTS FOR UI INTEGRATION ---
 
@@ -365,45 +423,6 @@ async def get_recommendations(request: Request, payload: QueryRequest):
         raise HTTPException(status_code=500, detail={"error": str(e), "debug": debug_info})
 
 
-@app.get("/properties", response_model=PaginatedPropertyResponse)
-async def get_random_properties(request: Request, page: int = 1, size: int = 20):
-    try:
-        df = request.app.state.df
-
-        # Use a fixed random state to ensure pagination returns consistent results
-        # while still showing a shuffled selection of properties.
-        random_df = df.sample(frac=1, random_state=42)
-
-        # Pagination Logic
-        total_records = len(random_df)
-        total_pages = math.ceil(total_records / size) if size > 0 else 1
-        start_idx = (page - 1) * size
-        end_idx = start_idx + size
-        
-        df_paginated = random_df.iloc[start_idx:end_idx]
-
-        cols_to_keep = [
-            'id', 'location', 'property_name', 'description',
-            'm2', 'Beds', 'Baths', 'payment_plan', 'price', 'tag',
-            'url_path', 'cover_image', 'developer_logo', 'price_float', 'property_type'
-        ]
-
-        available_cols = [col for col in cols_to_keep if col in df_paginated.columns]
-
-        # Convert to dictionary FIRST, then natively replace NaNs with None 
-        records = df_paginated[available_cols].to_dict(orient="records")
-        result_json = [{k: (None if pd.isna(v) else v) for k, v in row.items()} for row in records]
-
-        return {
-            "data": result_json,
-            "total": total_records,
-            "page": page,
-            "size": size,
-            "total_pages": total_pages
-        }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
 
 @app.post("/chat/location")
 async def chat_about_location(request: Request, payload: ChatRequest):
@@ -554,7 +573,83 @@ Answer:
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+# ==========================================
+# 5. Price Prediction Endpoint
+# ==========================================
 
-@app.get("/ping")
-async def ping_pong():
-    return {"ping": "pong"}
+
+@app.post("/predict-price", response_model=PricePredictionResponse)
+async def predict_price(request: Request, payload: PricePredictionRequest):
+    """
+    Predicts the price of a property using the trained XGBoost model.
+    Accepts location, property_type, m2, Beds, and Baths as input.
+    """
+    try:
+        import joblib
+        import numpy as np
+
+        # Load model and encoder (cached on app state if already loaded)
+        if not hasattr(request.app.state, "price_model"):
+            request.app.state.price_model = joblib.load("price_model/best_xgb_model.joblib")
+            request.app.state.price_encoder = joblib.load("price_model/location_encoder.joblib")
+
+        loaded_model = request.app.state.price_model
+        loaded_encoder = request.app.state.price_encoder
+
+        df_main = request.app.state.df  # Main DataFrame for loc_price_std calculation
+
+        # Build single-row DataFrame from input
+        sample_data = {
+            "location": payload.location,
+            "property_type": payload.property_type,
+            "m2": payload.m2,
+            "Beds": payload.Beds,
+            "Baths": payload.Baths,
+        }
+        df_single = pd.DataFrame([sample_data])
+
+        # a. Feature: is_luxury (on original scale)
+        df_single["is_luxury"] = (df_single["m2"] > 200).astype(int)
+
+        # b. Log transform m2
+        df_single["m2"] = np.log1p(df_single["m2"])
+
+        # c. Target encode location
+        df_single["location"] = loaded_encoder.transform(df_single[["location"]])
+
+        # d. Ratio features
+        df_single["bed_bath_ratio"] = df_single["Beds"] / (df_single["Baths"] + 1)
+        df_single["total_rooms"] = df_single["Beds"] + df_single["Baths"]
+        df_single["m2_per_bed"] = df_single["m2"] / (df_single["Beds"] + 1)
+
+        # e. Location stats (using main df)
+        df_single["loc_price_mean"] = df_single["location"]
+        df_single["loc_price_std"] = df_main.groupby("location")["price_float"].std().mean()
+
+        # f. One-hot encode property_type to match training columns exactly
+        model_features = loaded_model.feature_names_in_
+
+        for col in model_features:
+            if col.startswith("property_type_"):
+                prop_name = col.replace("property_type_", "")
+                df_single[col] = 1 if payload.property_type == prop_name else 0
+
+        # Align columns to model's expected input
+        df_single = df_single[model_features]
+
+        # Predict and inverse log-transform
+        log_prediction = loaded_model.predict(df_single)[0]
+        final_price = float(np.expm1(log_prediction))
+
+        return {
+            "location": payload.location,
+            "property_type": payload.property_type,
+            "m2": payload.m2,
+            "Beds": payload.Beds,
+            "Baths": payload.Baths,
+            "predicted_price_egp": final_price,
+            "predicted_price_formatted": f"{final_price:,.2f} EGP",
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
