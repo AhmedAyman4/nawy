@@ -18,6 +18,16 @@ const API_BASE_URL = "https://ahmed-ayman-nawy-property-recommender.hf.space";
 
 export default function ChatPage() {
   const [input, setInput] = useState("");
+  const [suggestedQuestions] = useState([
+    {
+      category: "Real Estate Projects",
+      question: "What are some of the top residential compounds located in the 6th Settlement of New Cairo?"
+    },
+    {
+      category: "Education",
+      question: "Which international schools and universities are available for residents living in El Shorouk City?"
+    }
+  ]);
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "welcome",
@@ -82,6 +92,15 @@ export default function ChatPage() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleSuggestionClick = (question: string) => {
+    setInput(question);
+    // Use a small timeout to let state update before sending
+    setTimeout(() => {
+        const fakeEvent = { preventDefault: () => {} } as React.FormEvent;
+        handleSend(fakeEvent);
+    }, 100);
   };
 
   const clearChat = () => {
@@ -202,35 +221,57 @@ export default function ChatPage() {
             <div ref={messagesEndRef} />
           </div>
 
-          {/* User Input Area */}
+           {/* User Input Area */}
           <div className="p-3 sm:p-6 bg-white border-t border-slate-100 shrink-0">
+            {/* Suggestions Chips */}
+            <div className="max-w-4xl mx-auto mb-4 flex flex-col gap-2">
+                {suggestedQuestions.map((s, idx) => (
+                    <button
+                        key={idx}
+                        onClick={() => handleSuggestionClick(s.question)}
+                        disabled={isLoading}
+                        className="w-full px-3 py-1.5 sm:px-4 sm:py-2 bg-slate-50 hover:bg-[#5DBDB6]/10 border border-slate-200 hover:border-[#5DBDB6]/30 rounded-xl sm:rounded-2xl transition-all duration-300 flex items-center gap-2 group text-left active:scale-95"
+                    >
+                        <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-lg bg-white border border-slate-100 flex items-center justify-center shrink-0 group-hover:bg-[#5DBDB6] group-hover:text-white transition-colors">
+                            <Info className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                        </div>
+                        <div className="flex flex-col min-w-0">
+                            <span className="text-[8px] sm:text-[9px] font-black text-[#5DBDB6] uppercase tracking-wider leading-none mb-0.5">{s.category}</span>
+                            <span className="text-[10px] sm:text-[11px] font-bold text-slate-600 group-hover:text-[#003D6B]">
+                                {s.question}
+                            </span>
+                        </div>
+                    </button>
+                ))}
+            </div>
+
             <form 
               onSubmit={handleSend}
-              className="max-w-4xl mx-auto flex items-stretch gap-2 sm:gap-3"
+              className="max-w-4xl mx-auto flex items-center gap-2 sm:gap-3"
             >
               <button 
                 type="button"
                 onClick={clearChat}
-                className="p-2 sm:p-3 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl sm:rounded-2xl transition-all duration-300 border border-slate-100"
+                className="p-2 sm:p-2.5 text-slate-300 hover:text-red-500 hover:bg-red-50/50 rounded-xl transition-all duration-300 border border-slate-100 flex-shrink-0"
                 title="Reset conversation"
               >
-                <Trash2 className="w-5 h-5 sm:w-6 sm:h-6" />
+                <Trash2 className="w-4 h-4 sm:w-5 sm:h-5" />
               </button>
               
-              <div className="relative flex-1">
+              <div className="relative flex-1 group">
                 <input
                   type="text"
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   placeholder="Ask about New Cairo vibes..."
-                  className="w-full h-full pl-4 pr-12 sm:pl-6 sm:pr-16 py-3 sm:py-4 bg-slate-50 border border-slate-200 rounded-2xl sm:rounded-3xl text-sm sm:text-base focus:outline-none focus:ring-4 focus:ring-[#003D6B]/5 focus:border-[#003D6B]/30 transition-all placeholder:text-slate-400 shadow-inner"
+                  className="w-full pl-4 pr-12 sm:pl-5 sm:pr-14 py-2 sm:py-2.5 bg-white border border-slate-200 rounded-xl sm:rounded-2xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#003D6B]/5 focus:border-[#003D6B]/40 transition-all placeholder:text-slate-400 font-medium"
                 />
                 <button
                   type="submit"
                   disabled={!input.trim() || isLoading}
-                  className="absolute right-1.5 top-1/2 -translate-y-1/2 p-2 sm:p-3 bg-[#003D6B] text-white rounded-xl sm:rounded-2xl hover:bg-[#1A365D] disabled:opacity-30 disabled:grayscale transition-all shadow-lg active:scale-95"
+                  className="absolute right-1 top-1/2 -translate-y-1/2 p-1.5 sm:p-2 bg-[#003D6B] text-white rounded-lg sm:rounded-xl hover:bg-[#1A365D] disabled:opacity-20 disabled:grayscale transition-all shadow-md active:scale-95 group-focus-within:bg-[#5DBDB6] group-focus-within:shadow-[#5DBDB6]/20"
                 >
-                  {isLoading ? <Loader2 className="w-5 h-5 sm:w-6 sm:h-6 animate-spin" /> : <Send className="w-5 h-5 sm:w-6 sm:h-6" />}
+                  {isLoading ? <Loader2 className="w-4 h-4 sm:w-4.5 sm:h-4.5 animate-spin" /> : <Send className="w-4 h-4 sm:w-4.5 sm:h-4.5" />}
                 </button>
               </div>
             </form>
@@ -249,11 +290,6 @@ export default function ChatPage() {
       </main>
 
       {/* Floating hints or badges could go here */}
-      <footer className="py-4 text-center opacity-30">
-        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#003D6B]">
-          © 2026 Nawy Intelligence Suite • All Rights Reserved
-        </p>
-      </footer>
     </div>
   );
 }
