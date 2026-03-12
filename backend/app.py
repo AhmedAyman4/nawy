@@ -1,6 +1,7 @@
 import os
 import re
 import math
+import joblib
 from contextlib import asynccontextmanager
 from typing import List, Dict, Any, Optional
 
@@ -129,6 +130,16 @@ async def lifespan(app: FastAPI):
         max_tokens=1000
     )
 
+    print("Loading Price Prediction Models...")
+    try:
+        app.state.price_model = joblib.load("./price_model/best_xgb_model.joblib")
+        app.state.price_encoder = joblib.load("./price_model/location_encoder.joblib")
+        print("Price Prediction Models loaded successfully!")
+    except Exception as e:
+        print(f"WARNING: Failed to load price prediction models: {e}")
+        app.state.price_model = None
+        app.state.price_encoder = None
+    
     print("🚀 API is ready!")
     yield
     print("Shutting down API...")
@@ -143,10 +154,17 @@ app = FastAPI(
     lifespan=lifespan
 )
 
+# Load origins from Hugging Face Environment Variables
+# We provide a default for local development if the variable isn't found
+raw_origins = os.environ.get("ALLOWED_ORIGINS", "http://localhost:3000")
+
+# Split the string by comma and remove any accidental whitespace
+origins = [o.strip() for o in raw_origins.split(",") if o.strip()]
+
 # Enable CORS for the Next.js Frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=origins,  # Now uses the list from your Env Var instead of ['*'] to allow all
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -585,13 +603,11 @@ async def predict_price(request: Request, payload: PricePredictionRequest):
     Accepts location, property_type, m2, Beds, and Baths as input.
     """
     try:
-        import joblib
         import numpy as np
 
-        # Load model and encoder (cached on app state if already loaded)
-        if not hasattr(request.app.state, "price_model"):
-            request.app.state.price_model = joblib.load("price_model/best_xgb_model.joblib")
-            request.app.state.price_encoder = joblib.load("price_model/location_encoder.joblib")
+        # Safety check in case the models failed to load on startup
+        if not getattr(request.app.state, "price_model", None) or not getattr(request.app.state, "price_encoder", None):
+            raise HTTPException(status_code=503, detail="Price prediction models are currently unavailable.")
 
         loaded_model = request.app.state.price_model
         loaded_encoder = request.app.state.price_encoder
