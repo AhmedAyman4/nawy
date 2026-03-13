@@ -47,7 +47,7 @@ export const Navbar: React.FC = () => {
   ];
 
   return (
-    <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 w-[95%] max-w-5xl">
+    <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 w-[95%] max-w-5xl no-print">
       <nav 
         className={`bg-white/95 backdrop-blur-md border border-slate-200/60 shadow-xl rounded-full transition-all duration-300 ease-out ${
           isVisible ? "translate-y-0 opacity-100" : "-translate-y-32 opacity-0"

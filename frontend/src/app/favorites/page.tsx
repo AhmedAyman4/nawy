@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Heart, Home, ArrowLeft, Scale, X, Trash2 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -12,16 +13,16 @@ import { PropertyData } from "@/types/property";
 import { LocationChat } from "@/components/LocationChat";
 
 export default function FavoritesPage() {
+  const router = useRouter();
   const { favorites } = useFavorites();
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [selectedForCompare, setSelectedForCompare] = useState<string[]>([]);
-  const [isCompareModalOpen, setIsCompareModalOpen] = useState<boolean>(false);
 
   const API_BASE_URL = "https://ahmed-ayman-nawy-property-recommender.hf.space";
 
   // Handle body scroll lock for modal
   useEffect(() => {
-    if (selectedIndex !== null || isCompareModalOpen) {
+    if (selectedIndex !== null) {
       document.body.style.overflow = "hidden";
     } else {
       document.body.style.overflow = "unset";
@@ -29,7 +30,7 @@ export default function FavoritesPage() {
     return () => {
       document.body.style.overflow = "unset";
     };
-  }, [selectedIndex, isCompareModalOpen]);
+  }, [selectedIndex]);
 
   const handleCompareToggle = (id: string) => {
     setSelectedForCompare((prev) => {
@@ -172,7 +173,12 @@ export default function FavoritesPage() {
                 </button>
                 <button
                     disabled={selectedForCompare.length < 2}
-                    onClick={() => setIsCompareModalOpen(true)}
+                    onClick={() => {
+                      if (selectedForCompare.length === 2) {
+                        localStorage.setItem('compare_properties', JSON.stringify(selectedProperties));
+                        router.push(`/compare?id1=${selectedForCompare[0]}&id2=${selectedForCompare[1]}`);
+                      }
+                    }}
                     className="bg-gradient-to-r from-[#5DBDB6] to-[#003D6B] text-white px-4 sm:px-8 py-2.5 sm:py-3 rounded-full font-black text-[10px] sm:text-xs shadow-lg shadow-[#003D6B]/20 transition-all hover:scale-105 active:scale-95 disabled:opacity-50 disabled:grayscale disabled:scale-100 disabled:cursor-not-allowed flex items-center gap-2"
                 >
                     <Scale className="w-3 h-3 sm:w-4 sm:h-4" /> <span className="hidden xs:inline">Compare Now</span><span className="xs:hidden">Compare</span>
@@ -203,15 +209,7 @@ export default function FavoritesPage() {
         />
       )}
 
-      {/* Compare Modal */}
-      {isCompareModalOpen && selectedProperties.length === 2 && (
-        <CompareModal
-          property1={selectedProperties[0]}
-          property2={selectedProperties[1]}
-          onClose={() => setIsCompareModalOpen(false)}
-          apiBaseUrl={API_BASE_URL}
-        />
-      )}
+      {/* Compare Modal removed - now using dedicated page */}
       {/* Location Chat Widget */}
       <LocationChat apiBaseUrl={API_BASE_URL} isCompareBarVisible={selectedForCompare.length > 0} />
     </div>

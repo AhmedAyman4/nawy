@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, FormEvent, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Search, Home, RefreshCcw } from "lucide-react";
 import Image from "next/image";
 import { PropertyData } from "@/types/property";
@@ -14,6 +15,7 @@ import { Scale, X, Trash2, MessageCircle } from "lucide-react";
 export type { PropertyData };
 
 export default function Page() {
+  const router = useRouter();
   const [query, setQuery] = useState<string>("");
   const [results, setResults] = useState<PropertyData[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -31,7 +33,6 @@ export default function Page() {
   const [propertyTypes, setPropertyTypes] = useState<string[]>([]);
   const [locations, setLocations] = useState<string[]>([]);
   const [selectedForCompare, setSelectedForCompare] = useState<string[]>([]);
-  const [isCompareModalOpen, setIsCompareModalOpen] = useState<boolean>(false);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [totalPages, setTotalPages] = useState<number>(1);
   const [totalRecords, setTotalRecords] = useState<number>(0);
@@ -466,7 +467,12 @@ export default function Page() {
                 </button>
                 <button
                     disabled={selectedForCompare.length < 2}
-                    onClick={() => setIsCompareModalOpen(true)}
+                    onClick={() => {
+                      if (selectedForCompare.length === 2) {
+                        localStorage.setItem('compare_properties', JSON.stringify(selectedProperties));
+                        router.push(`/compare?id1=${selectedForCompare[0]}&id2=${selectedForCompare[1]}`);
+                      }
+                    }}
                     className="bg-gradient-to-r from-[#5DBDB6] to-[#003D6B] text-white px-4 sm:px-8 py-2.5 sm:py-3 rounded-full font-black text-xs sm:text-sm shadow-lg shadow-[#003D6B]/20 transition-all hover:scale-105 active:scale-95 disabled:opacity-50 disabled:grayscale disabled:scale-100 disabled:cursor-not-allowed flex items-center gap-2"
                 >
                     <Scale className="w-3 h-3 sm:w-4 sm:h-4" /> <span className="hidden xs:inline">Compare Now</span><span className="xs:hidden">Compare</span>
@@ -498,15 +504,7 @@ export default function Page() {
           }
         />
       )}
-      {/* Compare Modal */}
-      {isCompareModalOpen && selectedProperties.length === 2 && (
-        <CompareModal
-          property1={selectedProperties[0]}
-          property2={selectedProperties[1]}
-          onClose={() => setIsCompareModalOpen(false)}
-          apiBaseUrl={API_BASE_URL}
-        />
-      )}
+      {/* Compare Modal removed - now using dedicated page */}
       {/* Location Chat Widget */}
       <LocationChat apiBaseUrl={API_BASE_URL} isCompareBarVisible={selectedForCompare.length > 0} />
     </div>

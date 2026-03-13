@@ -18,6 +18,10 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnablePassthrough, RunnableParallel, RunnableLambda
 from langchain_core.output_parsers import StrOutputParser
 
+from langsmith import traceable
+from langsmith import Client
+client = Client()  # Uses LANGSMITH_API_KEY env var
+
 # ==========================================
 # 1. Define Pydantic Models for the API
 # ==========================================
@@ -367,27 +371,10 @@ async def get_recommendations(request: Request, payload: QueryRequest):
 
         # Step 3: LLM filter code generation
         columns_str = str(['m2', 'Beds', 'Baths', 'price_float'])
-        prompt = ChatPromptTemplate.from_template("""
-        You are a pandas code generator. Your ONLY job is to filter a DataFrame called `recommended_df` by NUMERIC conditions.
-        
-        Available numeric columns ONLY:
-        {columns}
-        - m2: area in square meters (e.g. 120)
-        - Beds: number of bedrooms (e.g. 3)
-        - Baths: number of bathrooms (e.g. 2)
-        - price_float: price in full EGP — 1 million = 1000000, 10 million = 10000000
-        
-        User query: {query}
-        
-        Rules:
-        - Extract ONLY numeric conditions from the query (price, beds, baths, area).
-        - IGNORE any non-numeric filters like location, property type, or names — these are already handled elsewhere.
-        - If the query has NO numeric conditions, return: df_filtered = recommended_df
-        - Store result in df_filtered.
-        - Output ONLY a single line of raw Python pandas code. No markdown, no backticks, no explanation.
-        """)
+        # pull the search prompt from Langsmith
+        recommend_prompt = client.pull_prompt("recommend_prompt")  # Returns ChatPromptTemplate
 
-        chain = prompt | llm
+        chain = recommend_prompt | llm
         raw_code = chain.invoke({"columns": columns_str, "query": query}).content.strip()
         code = clean_llm_code(raw_code)
 
@@ -457,13 +444,16 @@ async def chat_about_location(request: Request, payload: ChatRequest):
 
         retriever = location_vectorstore.as_retriever(search_kwargs={"k": 10})
 
-        location_prompt = ChatPromptTemplate.from_template("""
-Answer the question based ONLY on the following context from location descriptions:
-<context>{context}</context>
-
-Question: {question}
-
-Answer:""")
+        # use dynamic prompt with Langsmith
+        location_prompt = client.pull_prompt("property_location_prompt")  # Returns ChatPromptTemplate
+        
+        # location_prompt = ChatPromptTemplate.from_template("""
+        # Answer the question based ONLY on the following context from location descriptions:
+        # <context>{context}</context>
+        
+        # Question: {question}
+        
+        # Answer:""")
 
         def format_docs(docs):
             return "\n\n".join(doc.page_content for doc in docs)
@@ -539,33 +529,10 @@ async def compare_properties(request: Request, payload: CompareRequest):
         def format_docs(docs):
             """Convert retrieved docs into text"""
             return "\n\n".join(doc.page_content for doc in docs)
+        
 
-        multi_context_prompt = ChatPromptTemplate.from_template(
-            """
-You are a real estate expert.
-
-Compare the following two properties and determine which one is better.
-
-<Property_Details>
-{property_context}
-</Property_Details>
-
-<Location_Context>
-{location_context}
-</Location_Context>
-
-Provide a comparison based on just the context above including:
-
-- Property specifications in markdown table format
-- Location advantages
-- Market trends
-- Value for money
-
-Finish with a clear final recommendation explaining which property is better and why.
-
-Answer:
-"""
-        )
+        # import the prompt from Langsmith
+        multi_context_prompt = client.pull_prompt("compare_multi_context_prompt")
 
         multi_context_chain = (
             {
