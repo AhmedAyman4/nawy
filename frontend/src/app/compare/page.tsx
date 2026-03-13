@@ -118,7 +118,7 @@ function CompareContent() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto">
+    <div className="max-w-5xl mx-auto">
       {/* Navigation & Title */}
       <div className="flex flex-col md:flex-row md:items-center justify-between mb-10 gap-6">
         <div className="flex items-center gap-5">
@@ -320,7 +320,7 @@ function CompareContent() {
 
 function PropertyMiniCard({ property, color, label }: { property: PropertyData; color: string; label: string }) {
   return (
-    <div className="bg-white p-6 md:p-8 print:p-4 rounded-3xl shadow-xl border-t-[12px] flex flex-col sm:flex-row print:flex-row items-center gap-8 print:gap-4 group hover:shadow-2xl transition-all duration-300" style={{ borderTopColor: color }}>
+    <div className="bg-white p-6 md:p-8 print:p-4 rounded-3xl shadow-xl border-t-[12px] flex flex-col sm:flex-row print:flex-row items-start gap-8 print:gap-4 group hover:shadow-2xl transition-all duration-300 h-full" style={{ borderTopColor: color }}>
       <div className="w-full sm:w-40 print:w-20 h-40 print:h-20 rounded-2xl overflow-hidden bg-slate-100 shrink-0 shadow-inner">
         <img
           src={property.cover_image || ""}
@@ -328,18 +328,18 @@ function PropertyMiniCard({ property, color, label }: { property: PropertyData; 
           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
         />
       </div>
-      <div className="flex-1 min-w-0 w-full text-center sm:text-left print:text-left">
-        <div className="flex flex-col sm:flex-row print:flex-row sm:items-center print:items-center justify-between print:justify-start gap-4 print:gap-2 mb-4 print:mb-2 w-full">
-            <span className="text-[11px] print:text-[8px] font-black uppercase tracking-[0.2em] print:tracking-normal px-4 py-1.5 print:px-2 print:py-0.5 rounded-full bg-slate-100 text-slate-500 inline-block self-center sm:self-start print:self-start whitespace-nowrap shrink-0">
+      <div className="flex-1 min-w-0 w-full text-left">
+        <div className="flex flex-row items-center justify-start gap-3 mb-4 print:mb-2 w-full">
+            <span className="text-[10px] md:text-[11px] print:text-[8px] font-black uppercase tracking-[0.1em] px-3 py-1.5 print:px-2 print:py-0.5 rounded-full bg-slate-100 text-slate-500 whitespace-nowrap shrink-0">
             {label}
             </span>
-            <p className="text-2xl print:text-[11px] font-black tracking-tight whitespace-nowrap shrink-0" style={{ color }}>
+            <p className="text-xl md:text-2xl print:text-[11px] font-black tracking-tight whitespace-nowrap shrink-0" style={{ color }}>
                 {property.price || (property.price_float ? `${property.price_float.toLocaleString()} EGP` : "N/A")}
             </p>
         </div>
         
-        <h4 className="text-xl print:text-xs font-bold text-[#1A365D] mb-2 print:mb-1 truncate leading-tight">{property.property_name || "Property Detail"}</h4>
-        <p className="text-slate-500 font-medium mb-6 print:mb-2 flex items-center justify-center sm:justify-start print:justify-start gap-2 print:text-[9px]">
+        <h4 className="text-xl print:text-xs font-bold text-[#1A365D] mb-2 print:mb-1 leading-tight">{property.property_name || "Property Detail"}</h4>
+        <p className="text-slate-500 font-medium mb-6 print:mb-2 flex items-center justify-start gap-2 print:text-[9px]">
             <span className="w-1.5 h-1.5 rounded-full bg-slate-300" />
             {property.location}
         </p>
@@ -361,7 +361,7 @@ function PropertyMiniCard({ property, color, label }: { property: PropertyData; 
 
         {property.url_path && (
             <a 
-                href={`https://www.nawy.com${property.url_path}`}
+                href={property.url_path.startsWith('http') ? property.url_path : `https://www.nawy.com${property.url_path.startsWith('/') ? '' : '/'}${property.url_path}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-[12px] print:text-[9px] font-bold text-[#5DBDB6] hover:underline flex items-center gap-1"
