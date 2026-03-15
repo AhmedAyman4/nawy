@@ -1,0 +1,28 @@
+# --- Force CPU-only PyTorch (Reduces image by ~3GB+) ---
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch
+torchvision
+torchaudio
+
+# --- Web Framework and Server ---
+fastapi
+uvicorn
+pydantic
+
+# --- Data Processing ---
+pandas
+
+# --- LangChain and Integrations ---
+langchain
+langsmith
+langchain-core
+langchain-huggingface
+langchain-chroma
+langchain-groq
+
+# --- Machine Learning & Vector DB ---
+sentence-transformers
+chromadb
+xgboost
+# For target encoder
+category_encoders
