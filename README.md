@@ -17,10 +17,16 @@ nawy/
 ├── 01-nawy-scraping/           # Data collection using Playwright & BeautifulSoup
 ├── 02-data-preprocessing/      # Data cleaning, feature engineering, and normalization
 ├── 03-embedding-semantic-search/# Vector DB (ChromaDB) & Price Prediction (XGBoost)
-├── backend/                    # FastAPI server for recommendations, chat, and prediction
+├── backend/                    # Modular FastAPI server
+│   ├── main.py                 # API Entry point
+│   ├── core/                   # Lifespan & initialization logic
+│   ├── routers/                # Feature-based API routes
+│   ├── schemas/                # Pydantic data models
+│   ├── utils/                  # Helper functions & dependencies
+│   └── app.py                  # Legacy combined script (to be deprecated)
 ├── frontend/                   # Next.js 16 + Tailwind CSS 4 user interface
 ├── project-guide.md            # Strategic project goals and roadmap
-└── README.md                   # Project overview and documentation (this file)
+└── README.md                   # Project overview and documentation
 ```
 
 ---
@@ -72,7 +78,7 @@ nawy/
    ```
 2. Install dependencies:
    ```bash
-   pip install fastapi uvicorn pandas langchain-huggingface langchain-chroma langchain-groq joblib xgboost scikit-learn
+   pip install -r requirements.txt
    ```
 3. Set your Groq API Key:
    ```bash
@@ -83,7 +89,8 @@ nawy/
    ```
 4. Run the server:
    ```bash
-   uvicorn app:app --reload
+   # Using the new modular structure
+   uvicorn main:app --reload
    ```
 
 ### Frontend Setup
