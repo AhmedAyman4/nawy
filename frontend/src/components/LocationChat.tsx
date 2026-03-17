@@ -29,13 +29,18 @@ export function LocationChat({ apiBaseUrl, isCompareBarVisible = false }: Locati
       question: "Which international schools and universities are available for residents living in El Shorouk City?"
     }
   ]);
-  const [sessionId] = useState(() => {
+  const [sessionId, setSessionId] = useState<string>("");
+
+  useEffect(() => {
     const stored = localStorage.getItem("nawy_location_chat_session_id");
-    if (stored) return stored;
-    const newId = `session_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
-    localStorage.setItem("nawy_location_chat_session_id", newId);
-    return newId;
-  });
+    if (stored) {
+      setSessionId(stored);
+    } else {
+      const newId = `session_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
+      localStorage.setItem("nawy_location_chat_session_id", newId);
+      setSessionId(newId);
+    }
+  }, []);
 
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -52,7 +57,7 @@ export function LocationChat({ apiBaseUrl, isCompareBarVisible = false }: Locati
 
   // Fetch history when chat opens
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && sessionId) {
       const fetchHistory = async () => {
         try {
           const response = await fetch(`${apiBaseUrl}/chat/location/${sessionId}/history`);
