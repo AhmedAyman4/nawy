@@ -46,6 +46,8 @@ nawy/
 - **Location Insights**: Chatbot that answers questions about specific areas/compounds using RAG (Retrieval-Augmented Generation).
 - **Property Comparison**: Ask the AI to compare two properties to get a detailed pros/cons analysis and recommendation.
 
+![Compare Parallel RAG sequence diagram](backend/assets/Compare%20Parallel%20RAG%20sequence%20diagram.png)
+
 ### 3. **Smart Price Prediction**
 - **XGBoost Engine**: Predicts property prices based on location, size, property type, and features.
 - **Luxury Analysis**: Incorporates feature engineering like `is_luxury` and `m2_per_bed` for high accuracy.
