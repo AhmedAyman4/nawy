@@ -29,6 +29,14 @@ export function LocationChat({ apiBaseUrl, isCompareBarVisible = false }: Locati
       question: "Which international schools and universities are available for residents living in El Shorouk City?"
     }
   ]);
+  const [sessionId] = useState(() => {
+    const stored = localStorage.getItem("nawy_location_chat_session_id");
+    if (stored) return stored;
+    const newId = `session_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
+    localStorage.setItem("nawy_location_chat_session_id", newId);
+    return newId;
+  });
+
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "welcome",
@@ -41,6 +49,33 @@ export function LocationChat({ apiBaseUrl, isCompareBarVisible = false }: Locati
   
   const [isNearFooter, setIsNearFooter] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Fetch history when chat opens
+  useEffect(() => {
+    if (isOpen) {
+      const fetchHistory = async () => {
+        try {
+          const response = await fetch(`${apiBaseUrl}/chat/location/${sessionId}/history`);
+          if (response.ok) {
+            const data = await response.json();
+            if (data.history && data.history.length > 0) {
+              const formattedMessages: Message[] = data.history.map((msg: { role: string; content: string }, index: number) => ({
+                id: `history_${index}`,
+                type: msg.role === 'human' ? 'user' : 'bot',
+                text: msg.content,
+                timestamp: new Date(), // Backend doesn't store timestamps yet, so we use current session's "now"
+              }));
+              setMessages(formattedMessages);
+            }
+          }
+        } catch (err) {
+          console.error("Failed to fetch chat history:", err);
+        }
+      };
+      
+      fetchHistory();
+    }
+  }, [isOpen, sessionId, apiBaseUrl]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -85,7 +120,10 @@ export function LocationChat({ apiBaseUrl, isCompareBarVisible = false }: Locati
       const response = await fetch(`${apiBaseUrl}/chat/location`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question: currentInput }),
+        body: JSON.stringify({ 
+          question: currentInput,
+          session_id: sessionId
+        }),
       });
 
       if (!response.ok) throw new Error("Failed to get response");
@@ -120,15 +158,25 @@ export function LocationChat({ apiBaseUrl, isCompareBarVisible = false }: Locati
     }, 100);
   };
 
-  const clearChat = () => {
-    setMessages([
-        {
-          id: "welcome",
-          type: "bot",
-          text: "Hi there! I'm your Location Assistant. Ask me anything about areas, locations, or neighborhood vibes in Egypt!",
-          timestamp: new Date(),
-        },
-      ]);
+  const clearChat = async () => {
+    try {
+      // Clear history on backend
+      await fetch(`${apiBaseUrl}/chat/location/${sessionId}`, {
+        method: "DELETE"
+      });
+      
+      // Clear history on frontend
+      setMessages([
+          {
+            id: "welcome",
+            type: "bot",
+            text: "Hi there! I'm your Location Assistant. Ask me anything about areas, locations, or neighborhood vibes in Egypt!",
+            timestamp: new Date(),
+          },
+        ]);
+    } catch (err) {
+      console.error("Failed to clear chat history:", err);
+    }
   }
 
   const bottomOffset = isNearFooter ? (isCompareBarVisible ? 'bottom-40 sm:bottom-44' : 'bottom-32 sm:bottom-36') : (isCompareBarVisible ? 'bottom-20 sm:bottom-24' : 'bottom-6 sm:bottom-8');

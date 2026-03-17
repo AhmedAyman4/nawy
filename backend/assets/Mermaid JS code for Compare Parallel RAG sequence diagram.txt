@@ -1,0 +1,29 @@
+sequenceDiagram
+    participant Client
+    participant API as FastAPI /compare
+    participant DF as app.state.df (CSV)
+    participant VS as location_vectorstore (ChromaDB)
+    participant LLM as Groq LLM (Llama-3.1)
+
+    Client->>API: POST /compare (id1, id2)
+    
+    rect rgb(240, 240, 240)
+    Note over API, VS: RunnableParallel Phase
+    
+    par Property Data Retrieval
+        API->>DF: Filter rows where ID is in [id1, id2]
+        DF-->>API: Return property specs (m2, Beds, Price, etc.)
+        API->>API: format into "property_context" string
+    and Location Context Retrieval
+        API->>VS: similarity_search (query context for id1 & id2)
+        VS-->>API: Return relevant document chunks
+        API->>API: format into "location_context" string
+    end
+    end
+
+    API->>API: Pull 'compare_multi_context_prompt_v1' from LangSmith
+    
+    API->>LLM: Send Prompt (Property Context + Location Context)
+    LLM-->>API: Return Structured Comparison Analysis
+    
+    API-->>Client: JSON Response (id1, id2, comparison_text)

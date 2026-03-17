@@ -28,6 +28,14 @@ export default function ChatPage() {
       question: "Which international schools and universities are available for residents living in El Shorouk City?"
     }
   ]);
+  const [sessionId] = useState(() => {
+    const stored = localStorage.getItem("nawy_location_chat_session_id");
+    if (stored) return stored;
+    const newId = `session_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
+    localStorage.setItem("nawy_location_chat_session_id", newId);
+    return newId;
+  });
+
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "welcome",
@@ -38,6 +46,31 @@ export default function ChatPage() {
   ]);
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Fetch history when page loads
+  useEffect(() => {
+    const fetchHistory = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/chat/location/${sessionId}/history`);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.history && data.history.length > 0) {
+            const formattedMessages: Message[] = data.history.map((msg: { role: string; content: string }, index: number) => ({
+              id: `history_${index}`,
+              type: msg.role === 'human' ? 'user' : 'bot',
+              text: msg.content,
+              timestamp: new Date(),
+            }));
+            setMessages(formattedMessages);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch chat history:", err);
+      }
+    };
+    
+    fetchHistory();
+  }, [sessionId]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -67,7 +100,10 @@ export default function ChatPage() {
       const response = await fetch(`${API_BASE_URL}/chat/location`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question: currentInput }),
+        body: JSON.stringify({ 
+          question: currentInput,
+          session_id: sessionId
+        }),
       });
 
       if (!response.ok) throw new Error("Failed to get response");
@@ -103,16 +139,24 @@ export default function ChatPage() {
     }, 100);
   };
 
-  const clearChat = () => {
+  const clearChat = async () => {
     if (confirm("Are you sure you want to clear this conversation?")) {
-      setMessages([
-        {
-          id: "welcome",
-          type: "bot",
-          text: "Welcome back! I'm ready for your next question about Egypt's premier locations. What area shall we explore?",
-          timestamp: new Date(),
-        },
-      ]);
+      try {
+        await fetch(`${API_BASE_URL}/chat/location/${sessionId}`, {
+          method: "DELETE"
+        });
+        
+        setMessages([
+          {
+            id: "welcome",
+            type: "bot",
+            text: "Welcome back! I'm ready for your next question about Egypt's premier locations. What area shall we explore?",
+            timestamp: new Date(),
+          },
+        ]);
+      } catch (err) {
+        console.error("Failed to clear chat history:", err);
+      }
     }
   };
 

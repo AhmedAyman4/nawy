@@ -14,6 +14,8 @@ from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_chroma import Chroma
 from langchain_groq import ChatGroq
 from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.messages import HumanMessage, AIMessage
+from langchain_mongodb.chat_message_histories import MongoDBChatMessageHistory
 
 from langchain_core.runnables import RunnablePassthrough, RunnableParallel, RunnableLambda
 from langchain_core.output_parsers import StrOutputParser
@@ -66,8 +68,16 @@ class PaginatedPropertyResponse(BaseModel):
     size: int
     total_pages: int
 
+# ---- UPDATED: ChatRequest now accepts a session_id ----
 class ChatRequest(BaseModel):
     question: str
+    session_id: str = "default"  # Client provides a unique session ID per user/conversation
+
+class ChatResponse(BaseModel):
+    question: str
+    answer: str
+    session_id: str
+    history_length: int  # Number of turns stored for this session
 
 class CompareRequest(BaseModel):
     id1: str
@@ -88,9 +98,17 @@ class PricePredictionResponse(BaseModel):
     Baths: float
     predicted_price_egp: float
     predicted_price_formatted: str
-    
+
 # ==========================================
-# 2. App Lifespan (Startup & Shutdown)
+# 2. MongoDB Chat History Config
+# ==========================================
+MONGO_URI = os.environ.get("MONGO_URI")
+MONGO_DB_NAME = "nawy-property-recommender-v1"
+MONGO_COLLECTION_NAME = "chat_history"
+HISTORY_MESSAGES_LIMIT = 5  # Number of most recent messages to retrieve per session
+
+# ==========================================
+# 3. App Lifespan (Startup & Shutdown)
 # ==========================================
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -99,7 +117,6 @@ async def lifespan(app: FastAPI):
     only once when the server starts up.
     """
     print("Loading properties DataFrame...")
-    # Ensure nawy_properties_cleaned.csv is in the same directory
     app.state.df = pd.read_csv("nawy_properties_cleaned.csv", dtype={"id": str})
 
     print("Initializing Embeddings model...")
@@ -109,7 +126,6 @@ async def lifespan(app: FastAPI):
     )
 
     print("Loading ChromaDB Vectorstore...")
-    # Ensure the property_recommender_db directory is present
     app.state.vectorstore = Chroma(
         persist_directory="./property_recommender_db",
         embedding_function=embeddings
@@ -126,9 +142,9 @@ async def lifespan(app: FastAPI):
     groq_api_key = os.environ.get("GROQ_API_KEY")
     if not groq_api_key:
         print("WARNING: GROQ_API_KEY is missing! Set it in your environment variables.")
-        
+
     app.state.llm = ChatGroq(
-        model="llama-3.1-8b-instant", # Using the exact model from your script
+        model="llama-3.1-8b-instant",
         api_key=groq_api_key,
         temperature=0,
         max_tokens=1000
@@ -143,13 +159,13 @@ async def lifespan(app: FastAPI):
         print(f"WARNING: Failed to load price prediction models: {e}")
         app.state.price_model = None
         app.state.price_encoder = None
-    
+
     print("🚀 API is ready!")
     yield
     print("Shutting down API...")
 
 # ==========================================
-# 3. Initialize FastAPI App
+# 4. Initialize FastAPI App
 # ==========================================
 app = FastAPI(
     title="Property Recommender System API",
@@ -158,17 +174,12 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# Load origins from Hugging Face Environment Variables
-# We provide a default for local development if the variable isn't found
 raw_origins = os.environ.get("ALLOWED_ORIGINS", "http://localhost:3000")
-
-# Split the string by comma and remove any accidental whitespace
 origins = [o.strip() for o in raw_origins.split(",") if o.strip()]
 
-# Enable CORS for the Next.js Frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,  # Now uses the list from your Env Var instead of ['*'] to allow all
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -182,7 +193,7 @@ def clean_llm_code(raw_code: str) -> str:
     return cleaned.strip()
 
 # ==========================================
-# 4. API Endpoints
+# 5. API Endpoints
 # ==========================================
 @app.get("/")
 async def root():
@@ -196,17 +207,12 @@ async def ping_pong():
 async def get_random_properties(request: Request, page: int = 1, size: int = 20):
     try:
         df = request.app.state.df
-
-        # Use a fixed random state to ensure pagination returns consistent results
-        # while still showing a shuffled selection of properties.
         random_df = df.sample(frac=1, random_state=42)
 
-        # Pagination Logic
         total_records = len(random_df)
         total_pages = math.ceil(total_records / size) if size > 0 else 1
         start_idx = (page - 1) * size
         end_idx = start_idx + size
-        
         df_paginated = random_df.iloc[start_idx:end_idx]
 
         cols_to_keep = [
@@ -214,10 +220,7 @@ async def get_random_properties(request: Request, page: int = 1, size: int = 20)
             'm2', 'Beds', 'Baths', 'payment_plan', 'price', 'tag',
             'url_path', 'cover_image', 'developer_logo', 'price_float', 'property_type'
         ]
-
         available_cols = [col for col in cols_to_keep if col in df_paginated.columns]
-
-        # Convert to dictionary FIRST, then natively replace NaNs with None 
         records = df_paginated[available_cols].to_dict(orient="records")
         result_json = [{k: (None if pd.isna(v) else v) for k, v in row.items()} for row in records]
 
@@ -231,19 +234,12 @@ async def get_random_properties(request: Request, page: int = 1, size: int = 20)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# --- NEW ENDPOINTS FOR UI INTEGRATION ---
 
 @app.get("/filter-options")
 async def get_filter_options(request: Request):
-    """
-    Returns unique values from the dataset to populate UI dropdown menus.
-    """
     df = request.app.state.df
-    
     locations = df['location'].dropna().unique().tolist() if 'location' in df.columns else []
-    # FIX: Use the property_type column correctly to populate the dropdowns
     property_types = df['property_type'].dropna().unique().tolist() if 'property_type' in df.columns else []
-    
     return {
         "locations": sorted(locations),
         "property_types": sorted(property_types)
@@ -252,46 +248,37 @@ async def get_filter_options(request: Request):
 
 @app.post("/filter", response_model=PaginatedPropertyResponse)
 async def filter_properties(request: Request, payload: FilterRequest):
-    """
-    Applies hard filters based on the UI bar selections.
-    """
     try:
         df = request.app.state.df.copy()
 
-        # 1. Location Filter (Partial Match)
         if payload.location:
             df = df[df['location'].str.contains(payload.location, case=False, na=False)]
-        
-        # 2. Property Type Filter (FIX: Filters on property_type instead of tag)
+
         if payload.property_type:
             df = df[df['property_type'].str.contains(payload.property_type, case=False, na=False)]
 
-        # 3. Beds & Baths Filters
         if payload.Beds is not None:
             if payload.Beds >= 5:
                 df = df[df['Beds'] >= payload.Beds]
             else:
                 df = df[df['Beds'] == payload.Beds]
-        
+
         if payload.Baths is not None:
             if payload.Baths >= 5:
                 df = df[df['Baths'] >= payload.Baths]
             else:
                 df = df[df['Baths'] == payload.Baths]
 
-        # 4. Price Filters
         if payload.min_price is not None:
             df = df[df['price_float'] >= payload.min_price]
-            
+
         if payload.max_price is not None:
             df = df[df['price_float'] <= payload.max_price]
 
-        # Pagination Logic
         total_records = len(df)
         total_pages = math.ceil(total_records / payload.size) if payload.size > 0 else 1
         start_idx = (payload.page - 1) * payload.size
         end_idx = start_idx + payload.size
-        
         df_paginated = df.iloc[start_idx:end_idx]
 
         cols_to_keep = [
@@ -299,14 +286,11 @@ async def filter_properties(request: Request, payload: FilterRequest):
             'm2', 'Beds', 'Baths', 'payment_plan', 'price', 'tag',
             'url_path', 'cover_image', 'developer_logo', 'price_float', 'property_type'
         ]
-        
         available_cols = [col for col in cols_to_keep if col in df_paginated.columns]
         df_filtered = df_paginated[available_cols]
-
-        # Convert to dictionary FIRST, then natively replace NaNs with None to avoid JSON 500 errors
         records = df_filtered.to_dict(orient='records')
         result_json = [{k: (None if pd.isna(v) else v) for k, v in row.items()} for row in records]
-        
+
         return {
             "data": result_json,
             "total": total_records,
@@ -314,11 +298,8 @@ async def filter_properties(request: Request, payload: FilterRequest):
             "size": payload.size,
             "total_pages": total_pages
         }
-
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
-# ----------------------------------------
 
 
 @app.post("/recommend")
@@ -340,18 +321,15 @@ async def get_recommendations(request: Request, payload: QueryRequest):
         if not query.strip():
             return {"data": [], "total": 0, "page": page, "size": size, "total_pages": 0, "debug": {"reason": "Empty query"}}
 
-        # Step 1: Semantic Search
         recommendations = vectorstore.similarity_search(query, k=top_k)
         debug_info["vectorstore_hits"] = len(recommendations)
 
-        # Step 2: ID extraction with float normalization
         recommendation_ids = []
         raw_ids_sample = []
         for doc in recommendations:
             raw_id = doc.metadata.get('id')
             if raw_id is not None:
                 raw_ids_sample.append(raw_id)
-                # DON'T convert to int — just cast directly to string to preserve leading zeros
                 normalized_id = str(raw_id)
                 recommendation_ids.append(normalized_id)
 
@@ -367,17 +345,13 @@ async def get_recommendations(request: Request, payload: QueryRequest):
         debug_info["df_matches_after_id_join"] = len(recommended_df)
 
         if recommended_df.empty:
-            return {"data": [], "total": 0, "page": page, "size": size, "total_pages": 0, "debug": {**debug_info, "reason": "ID join returned 0 rows — possible type mismatch between vectorstore and DataFrame IDs"}}
+            return {"data": [], "total": 0, "page": page, "size": size, "total_pages": 0, "debug": {**debug_info, "reason": "ID join returned 0 rows"}}
 
-        # Step 3: LLM filter code generation
         columns_str = str(['m2', 'Beds', 'Baths', 'price_float'])
-        # pull the search prompt from Langsmith
-        recommend_prompt = client.pull_prompt("recommend_prompt")  # Returns ChatPromptTemplate
-
+        recommend_prompt = client.pull_prompt("recommend_prompt_v1")
         chain = recommend_prompt | llm
         raw_code = chain.invoke({"columns": columns_str, "query": query}).content.strip()
         code = clean_llm_code(raw_code)
-
         debug_info["llm_generated_code"] = code
 
         exec_locals = {"pd": pd, "recommended_df": recommended_df}
@@ -390,7 +364,7 @@ async def get_recommendations(request: Request, payload: QueryRequest):
                 debug_info["llm_filter_result"] = "df_filtered was None — falling back"
                 df_filtered = recommended_df
             elif len(df_filtered) == 0:
-                debug_info["llm_filter_result"] = f"df_filtered was empty after applying code — falling back. price_float sample: {recommended_df['price_float'].dropna().head(5).tolist()}"
+                debug_info["llm_filter_result"] = f"df_filtered was empty — falling back"
                 df_filtered = recommended_df
             else:
                 debug_info["llm_filter_result"] = f"OK — {len(df_filtered)} rows after filter"
@@ -399,7 +373,6 @@ async def get_recommendations(request: Request, payload: QueryRequest):
             debug_info["llm_filter_result"] = f"exec() error: {str(exec_error)} — falling back"
             df_filtered = recommended_df
 
-        # Pagination
         total_records = len(df_filtered)
         total_pages = math.ceil(total_records / size) if size > 0 else 1
         start_idx = (page - 1) * size
@@ -428,12 +401,15 @@ async def get_recommendations(request: Request, payload: QueryRequest):
         raise HTTPException(status_code=500, detail={"error": str(e), "debug": debug_info})
 
 
-
-@app.post("/chat/location")
+# ==========================================
+# 6. Chat Location with MongoDB Memory
+# ==========================================
+@app.post("/chat/location", response_model=ChatResponse)
 async def chat_about_location(request: Request, payload: ChatRequest):
     """
-    RAG-based chat endpoint for answering questions about location information.
-    Uses the location_information_db ChromaDB vectorstore.
+    RAG-based chat endpoint with MongoDB-persisted conversation memory.
+    History is stored in MongoDB per session_id, and the last 5 messages are
+    retrieved on each request.
     """
     try:
         llm = request.app.state.llm
@@ -442,35 +418,72 @@ async def chat_about_location(request: Request, payload: ChatRequest):
         if not payload.question.strip():
             raise HTTPException(status_code=400, detail="Question cannot be empty.")
 
-        retriever = location_vectorstore.as_retriever(search_kwargs={"k": 10})
+        session_id = payload.session_id
 
-        # use dynamic prompt with Langsmith
-        location_prompt = client.pull_prompt("property_location_prompt")  # Returns ChatPromptTemplate
-        
-        # location_prompt = ChatPromptTemplate.from_template("""
-        # Answer the question based ONLY on the following context from location descriptions:
-        # <context>{context}</context>
-        
-        # Question: {question}
-        
-        # Answer:""")
+        # 1. Load MongoDB-backed history for this session
+        mongo_history = MongoDBChatMessageHistory(
+            connection_string=MONGO_URI,
+            database_name=MONGO_DB_NAME,
+            collection_name=MONGO_COLLECTION_NAME,
+            session_id=session_id,
+        )
 
-        def format_docs(docs):
-            return "\n\n".join(doc.page_content for doc in docs)
+        # 2. Retrieve the last N messages to pass as context (avoids token overflow)
+        history = mongo_history.messages[-HISTORY_MESSAGES_LIMIT:]
 
-        retrieved_docs = retriever.invoke(payload.question)
-        context = format_docs(retrieved_docs)
+        # 3. Rewrite the user's question into a standalone query using chat history.
+        #    This resolves references like "it", "there", "that area" into explicit terms
+        #    so the vector DB retriever can find the correct documents.
+        if history:
+            history_text = "\n".join(
+                f"{'User' if isinstance(msg, HumanMessage) else 'Assistant'}: {msg.content}"
+                for msg in history
+            )
+            rewrite_prompt = f"""Given the conversation history below, rewrite the follow-up question 
+into a fully self-contained, standalone search query. 
+Replace any pronouns or references like "it", "there", "that place", "that area" with their explicit names from the history.
+Return ONLY the rewritten query, nothing else.
 
+Conversation history:
+{history_text}
+
+Follow-up question: {payload.question}
+
+Standalone search query:"""
+
+            rewritten = llm.invoke(rewrite_prompt)
+            retriever_query = rewritten.content.strip()
+        else:
+            # No history yet — use the question as-is
+            retriever_query = payload.question
+
+        # 4. Retrieve relevant location context via RAG using the rewritten query
+        retriever = location_vectorstore.as_retriever(search_kwargs={"k": 5})
+        retrieved_docs = retriever.invoke(retriever_query)
+        context = "\n\n".join(doc.page_content for doc in retrieved_docs)
+
+        # 5. Pull prompt from LangSmith (must include {context}, {chat_history}, {question})
+        location_prompt = client.pull_prompt("property_location_prompt_v1")
         chain = location_prompt | llm
 
+        # 6. Invoke chain with context, history, and current question
         response = chain.invoke({
             "context": context,
+            "chat_history": history,
             "question": payload.question
         })
 
+        answer = response.content.strip()
+
+        # 7. Persist this turn to MongoDB
+        mongo_history.add_user_message(payload.question)
+        mongo_history.add_ai_message(answer)
+
         return {
             "question": payload.question,
-            "answer": response.content.strip()
+            "answer": answer,
+            "session_id": session_id,
+            "history_length": len(mongo_history.messages) // 2  # Total turns stored
         }
 
     except HTTPException:
@@ -479,24 +492,56 @@ async def chat_about_location(request: Request, payload: ChatRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.delete("/chat/location/{session_id}")
+async def clear_chat_history(session_id: str):
+    """
+    Clears the conversation history for a given session_id from MongoDB.
+    Useful for 'New Chat' / 'Clear History' buttons on the frontend.
+    """
+    mongo_history = MongoDBChatMessageHistory(
+        connection_string=MONGO_URI,
+        database_name=MONGO_DB_NAME,
+        collection_name=MONGO_COLLECTION_NAME,
+        session_id=session_id,
+    )
+    mongo_history.clear()
+    return {"message": f"History cleared for session '{session_id}'"}
+
+
+@app.get("/chat/location/{session_id}/history")
+async def get_chat_history(session_id: str):
+    """
+    Returns the full conversation history for a session from MongoDB.
+    Useful for debugging or restoring UI state.
+    """
+    mongo_history = MongoDBChatMessageHistory(
+        connection_string=MONGO_URI,
+        database_name=MONGO_DB_NAME,
+        collection_name=MONGO_COLLECTION_NAME,
+        session_id=session_id,
+    )
+    history = mongo_history.messages
+    formatted = [
+        {"role": "human" if isinstance(msg, HumanMessage) else "assistant", "content": msg.content}
+        for msg in history
+    ]
+    return {
+        "session_id": session_id,
+        "history": formatted,
+        "turns": len(formatted) // 2
+    }
+
+
 @app.post("/compare")
 async def compare_properties(request: Request, payload: CompareRequest):
-    """
-    Compares two properties by ID using property details from the DataFrame
-    and location context from the vectorstore.
-    """
     try:
         df = request.app.state.df
         vectorstore = request.app.state.location_vectorstore
         llm = request.app.state.llm
 
         def get_properties_context(id1, id2, dataframe=df):
-            """
-            Takes two string IDs and returns property details as formatted text.
-            """
             ids = [str(id1), str(id2)]
             selected_properties = dataframe[dataframe['id'].isin(ids)]
-
             context_parts = []
             for _, row in selected_properties.iterrows():
                 prop_text = (
@@ -510,29 +555,19 @@ async def compare_properties(request: Request, payload: CompareRequest):
                     f"Price: {row['price']}"
                 )
                 context_parts.append(prop_text)
-
             return "\n\n---\n\n".join(context_parts)
 
         def property_retriever(inputs):
-            """Retrieve property specs from dataframe"""
-            id1 = inputs["id1"]
-            id2 = inputs["id2"]
-            return get_properties_context(id1, id2)
+            return get_properties_context(inputs["id1"], inputs["id2"])
 
         def location_retriever(inputs):
-            """Retrieve location information from vectorstore"""
             query = f"locations of properties {inputs['id1']} and {inputs['id2']}"
-            return vectorstore.as_retriever(
-                search_kwargs={"k": 5}
-            ).invoke(query)
+            return vectorstore.as_retriever(search_kwargs={"k": 5}).invoke(query)
 
         def format_docs(docs):
-            """Convert retrieved docs into text"""
             return "\n\n".join(doc.page_content for doc in docs)
-        
 
-        # import the prompt from Langsmith
-        multi_context_prompt = client.pull_prompt("compare_multi_context_prompt")
+        multi_context_prompt = client.pull_prompt("compare_multi_context_prompt_v1")
 
         multi_context_chain = (
             {
@@ -544,44 +579,29 @@ async def compare_properties(request: Request, payload: CompareRequest):
             | StrOutputParser()
         )
 
-        result = multi_context_chain.invoke({
-            "id1": payload.id1,
-            "id2": payload.id2
-        })
+        result = multi_context_chain.invoke({"id1": payload.id1, "id2": payload.id2})
 
-        return {
-            "id1": payload.id1,
-            "id2": payload.id2,
-            "comparison": result
-        }
+        return {"id1": payload.id1, "id2": payload.id2, "comparison": result}
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# ==========================================
-# 5. Price Prediction Endpoint
-# ==========================================
 
-
+# ==========================================
+# 7. Price Prediction Endpoint
+# ==========================================
 @app.post("/predict-price", response_model=PricePredictionResponse)
 async def predict_price(request: Request, payload: PricePredictionRequest):
-    """
-    Predicts the price of a property using the trained XGBoost model.
-    Accepts location, property_type, m2, Beds, and Baths as input.
-    """
     try:
         import numpy as np
 
-        # Safety check in case the models failed to load on startup
         if not getattr(request.app.state, "price_model", None) or not getattr(request.app.state, "price_encoder", None):
             raise HTTPException(status_code=503, detail="Price prediction models are currently unavailable.")
 
         loaded_model = request.app.state.price_model
         loaded_encoder = request.app.state.price_encoder
+        df_main = request.app.state.df
 
-        df_main = request.app.state.df  # Main DataFrame for loc_price_std calculation
-
-        # Build single-row DataFrame from input
         sample_data = {
             "location": payload.location,
             "property_type": payload.property_type,
@@ -591,36 +611,22 @@ async def predict_price(request: Request, payload: PricePredictionRequest):
         }
         df_single = pd.DataFrame([sample_data])
 
-        # a. Feature: is_luxury (on original scale)
         df_single["is_luxury"] = (df_single["m2"] > 200).astype(int)
-
-        # b. Log transform m2
         df_single["m2"] = np.log1p(df_single["m2"])
-
-        # c. Target encode location
         df_single["location"] = loaded_encoder.transform(df_single[["location"]])
-
-        # d. Ratio features
         df_single["bed_bath_ratio"] = df_single["Beds"] / (df_single["Baths"] + 1)
         df_single["total_rooms"] = df_single["Beds"] + df_single["Baths"]
         df_single["m2_per_bed"] = df_single["m2"] / (df_single["Beds"] + 1)
-
-        # e. Location stats (using main df)
         df_single["loc_price_mean"] = df_single["location"]
         df_single["loc_price_std"] = df_main.groupby("location")["price_float"].std().mean()
 
-        # f. One-hot encode property_type to match training columns exactly
         model_features = loaded_model.feature_names_in_
-
         for col in model_features:
             if col.startswith("property_type_"):
                 prop_name = col.replace("property_type_", "")
                 df_single[col] = 1 if payload.property_type == prop_name else 0
 
-        # Align columns to model's expected input
         df_single = df_single[model_features]
-
-        # Predict and inverse log-transform
         log_prediction = loaded_model.predict(df_single)[0]
         final_price = float(np.expm1(log_prediction))
 
