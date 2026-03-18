@@ -10,7 +10,7 @@ The system combines data scraping, advanced preprocessing, vector-based semantic
 
 ## Architecture
 
-![Backend Diagram](backend/assets/Backend%20Diagram.png)
+![Backend Diagram](backend/assets/Backend-Diagram.png)
 
 ---
 
@@ -42,11 +42,17 @@ nawy/
 - **Hybrid Filtering**: Combines vector similarity search (ChromaDB) with LLM-parsed numeric constraints (Price, Beds, Baths).
 - **Intelligent Ranking**: Uses state-of-the-art embeddings (`Qwen/Qwen3-Embedding-0.6B`) for highly relevant results.
 
+**Natural Language Search Sequence Diagram**
+
+![Natural Language Search Sequence Diagram](backend/assets/natural-language-search-sequence-diagram.png)
+
 ### 2. **AI Personal Consultant (RAG Chat)**
 - **Location Insights**: Chatbot that answers questions about specific areas/compounds using RAG (Retrieval-Augmented Generation).
 - **Property Comparison**: Ask the AI to compare two properties to get a detailed pros/cons analysis and recommendation.
 
-![Compare Parallel RAG sequence diagram](backend/assets/Compare%20Parallel%20RAG%20sequence%20diagram.png)
+**Compare Parallel RAG sequence diagram**
+
+![Compare Parallel RAG sequence diagram](backend/assets/Compare-Parallel-RAG-sequence-diagram.png)
 
 ### 3. **Smart Price Prediction**
 - **XGBoost Engine**: Predicts property prices based on location, size, property type, and features.

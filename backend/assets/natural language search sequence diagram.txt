@@ -1,0 +1,41 @@
+sequenceDiagram
+    autonumber
+    participant Client
+    participant API as FastAPI (recommend)
+    participant VDB as ChromaDB (Vectorstore)
+    participant LLM as Groq (Llama 3.1)
+    participant DF as Pandas DataFrame
+
+    Client->>API: POST /recommend (query, top_k)
+    
+    rect rgb(240, 240, 240)
+    Note over API, VDB: Semantic Search Phase
+    API->>VDB: similarity_search(query, k=top_k)
+    VDB-->>API: List of Documents (Metadata)
+    API->>API: Extract IDs from Metadata
+    end
+
+    rect rgb(230, 245, 255)
+    Note over API, DF: Data Retrieval Phase
+    API->>DF: Filter rows where ID in extracted_ids
+    DF-->>API: recommended_df (Sub-dataframe)
+    end
+
+    rect rgb(255, 245, 230)
+    Note over API, LLM: Intelligent Filtering Phase
+    API->>LLM: Send query + column schemas
+    LLM-->>API: Return Python code string (df_filtered)
+    end
+
+    rect rgb(240, 255, 240)
+    Note over API: Execution & Fallback
+    API->>API: exec(generated_code)
+    alt Execution Success
+        API->>API: Use df_filtered
+    else Execution Error / Empty Result
+        API->>API: Fallback to original recommended_df
+    end
+    end
+
+    API->>API: Apply Pagination (page, size)
+    API-->>Client: Return JSON (data, total, debug)
