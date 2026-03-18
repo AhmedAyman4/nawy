@@ -58,6 +58,10 @@ nawy/
 - **XGBoost Engine**: Predicts property prices based on location, size, property type, and features.
 - **Luxury Analysis**: Incorporates feature engineering like `is_luxury` and `m2_per_bed` for high accuracy.
 
+**Price Prediction Sequence Diagram**
+
+![Price Prediction Sequence Diagram](backend/assets/price-prediction-sequence-diagram.png)
+
 ### 4. **Modern Web UI**
 - **Responsive Design**: Optimized for mobile and desktop.
 - **Interactive Experience**: Paginated results, filter chips, and real-time AI chat.

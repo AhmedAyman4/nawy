@@ -1,0 +1,34 @@
+sequenceDiagram
+    autonumber
+    participant Client
+    participant API as FastAPI (predict_price)
+    participant Encoder as Location Encoder (Joblib)
+    participant Model as XGBoost Model (Joblib)
+    participant DF as Reference DataFrame
+
+    Client->>API: POST /predict-price (location, m2, beds, etc.)
+    
+    rect rgb(240, 240, 240)
+    Note over API, DF: Feature Engineering Phase
+    API->>API: Calculate 'is_luxury' (m2 > 200)
+    API->>API: Apply Log Transformation: log1p(m2)
+    API->>Encoder: transform(location)
+    Encoder-->>API: Label Encoded Location
+    API->>DF: Get Mean/Std price for location context
+    API->>API: Compute Ratios (bed_bath_ratio, m2_per_bed)
+    end
+
+    rect rgb(230, 245, 255)
+    Note over API, Model: Inference Phase
+    API->>API: Align features with model_features_in
+    API->>Model: predict(df_single)
+    Model-->>API: log_prediction (Float)
+    end
+
+    rect rgb(240, 255, 240)
+    Note over API: Post-Processing
+    API->>API: Inverse Log Transform: expm1(log_prediction)
+    API->>API: Format currency string (EGP)
+    end
+
+    API-->>Client: Return PricePredictionResponse
