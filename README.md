@@ -8,9 +8,9 @@ The **Nawy Property Recommender** is an end-to-end solution designed to transfor
 
 The system combines data scraping, advanced preprocessing, vector-based semantic search, and Large Language Models (LLMs) to provide a "digital property consultant" experience.
 
-## Architecture
+## High Level Architecture
 
-![Backend Diagram](backend/assets/Backend-Diagram.png)
+![High Level Architecture](backend/assets/high-level-architecture-diagram.png)
 
 ---
 

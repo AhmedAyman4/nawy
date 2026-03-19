@@ -24,6 +24,10 @@ from langsmith import traceable
 from langsmith import Client
 client = Client()  # Uses LANGSMITH_API_KEY env var
 
+import json
+from datetime import datetime, timezone
+from pymongo import MongoClient
+
 # ==========================================
 # 1. Define Pydantic Models for the API
 # ==========================================
@@ -106,6 +110,32 @@ MONGO_URI = os.environ.get("MONGO_URI")
 MONGO_DB_NAME = "nawy-property-recommender-v1"
 MONGO_COLLECTION_NAME = "chat_history"
 HISTORY_MESSAGES_LIMIT = 5  # Number of most recent messages to retrieve per session
+
+# ==========================================
+# User Preference Profile Config
+# ==========================================
+MONGO_PREFERENCES_COLLECTION = "user_preferences"
+PREFERENCE_EXTRACTION_EVERY_N_TURNS = 3  # Extract preferences every N user turns
+
+USER_PREFERENCE_SCHEMA = {
+    "user_id": None,               # str  — equals session_id
+    "last_updated": None,          # ISO datetime string (UTC)
+    "preferred_locations": [],     # list[str] — locations & compounds the user mentions
+    "property_specs": {            # dict — structured property requirements
+        "types": [],               # list[str] e.g. ["apartment", "villa"]
+        "beds": None,              # int | null
+        "baths": None,             # int | null
+        "m2": None                 # float | null — desired area in sqm
+    },
+    "budget_range": {              # dict — price range in EGP
+        "min": None,               # float | null
+        "max": None                # float | null
+    },
+    "lifestyle_preferences": [],   # list[str] — amenities, proximity needs, lifestyle tags
+    "investment_intent": None,     # bool | null — True if user signals ROI focus
+    "summary_of_intent": "",       # str — short LLM-generated plain-English vibe summary
+    "turn_counter": 0              # int — tracks how many user turns have been processed
+}
 
 # ==========================================
 # 3. App Lifespan (Startup & Shutdown)
@@ -191,6 +221,125 @@ def clean_llm_code(raw_code: str) -> str:
     cleaned = re.sub(r"^```\n", "", cleaned)
     cleaned = re.sub(r"```$", "", cleaned)
     return cleaned.strip()
+
+
+# ==========================================
+# User Preference Helpers
+# ==========================================
+def _get_preferences_collection():
+    """Return the MongoDB user_preferences collection."""
+    mongo_client = MongoClient(MONGO_URI)
+    db = mongo_client[MONGO_DB_NAME]
+    return db[MONGO_PREFERENCES_COLLECTION]
+
+
+def _load_preference_doc(session_id: str) -> dict:
+    """
+    Load the preference document for this session from MongoDB.
+    If none exists yet, return a fresh copy of the schema with user_id set.
+    """
+    col = _get_preferences_collection()
+    doc = col.find_one({"user_id": session_id})
+    if doc is None:
+        doc = dict(USER_PREFERENCE_SCHEMA)
+        doc["user_id"] = session_id
+    return doc
+
+
+def _save_preference_doc(doc: dict) -> None:
+    """Upsert the preference document back to MongoDB."""
+    col = _get_preferences_collection()
+    col.update_one(
+        {"user_id": doc["user_id"]},
+        {"$set": doc},
+        upsert=True
+    )
+
+
+def _extract_preferences_from_history(new_user_messages: list[str], existing_profile: dict, llm) -> dict:
+    """
+    Run one LLM call on only the NEW user questions (since the last batch)
+    and merge the result into the existing profile.
+    """
+    if not new_user_messages:
+        return {}
+
+    new_questions_text = "\n".join(f"- {msg}" for msg in new_user_messages)
+
+    # Strip internal bookkeeping fields — the LLM only sees preference fields
+    current_profile_text = json.dumps(
+        {k: v for k, v in existing_profile.items() if k not in ("user_id", "last_updated", "turn_counter", "_id")},
+        indent=2
+    )
+
+    extraction_prompt = client.pull_prompt("extract_preferences_from_history_prompt")
+    
+    preference_chain = extraction_prompt | llm
+    
+    response = preference_chain.invoke({
+        "current_profile_text": current_profile_text,
+        "new_questions_text": new_questions_text
+    })
+    
+    raw = response.content.strip()
+
+    # Strip accidental markdown fences
+    raw = re.sub(r"^```json\s*", "", raw, flags=re.IGNORECASE)
+    raw = re.sub(r"^```\s*", "", raw)
+    raw = re.sub(r"```$", "", raw)
+
+    try:
+        return json.loads(raw.strip())
+    except json.JSONDecodeError:
+        return {}
+
+
+def maybe_update_preferences(session_id: str, all_messages, llm) -> None:
+    """
+    Increments the turn counter and, every N turns, extracts preferences
+    from only the new user questions and merges them into the saved profile.
+    Failures are caught and logged so they never crash the chat endpoint.
+    """
+    try:
+        doc = _load_preference_doc(session_id)
+        doc["turn_counter"] = doc.get("turn_counter", 0) + 1
+
+        if doc["turn_counter"] % PREFERENCE_EXTRACTION_EVERY_N_TURNS == 0:
+            # Count how many user messages were already processed in previous batches
+            already_processed = doc.get("processed_user_message_count", 0)
+
+            # Collect only HumanMessage content — skip AI responses
+            all_user_texts = [
+                msg.content
+                for msg in all_messages
+                if isinstance(msg, HumanMessage)
+            ]
+
+            # Only the questions that are new since last extraction
+            new_user_texts = all_user_texts[already_processed:]
+
+            if new_user_texts:
+                extracted = _extract_preferences_from_history(new_user_texts, doc, llm)
+
+                if extracted:
+                    for field in [
+                        "preferred_locations", "property_specs",
+                        "budget_range", "lifestyle_preferences",
+                        "investment_intent", "summary_of_intent"
+                    ]:
+                        if field in extracted:
+                            doc[field] = extracted[field]
+
+                # Advance the pointer so next batch starts from here
+                doc["processed_user_message_count"] = len(all_user_texts)
+
+            doc["last_updated"] = datetime.now(timezone.utc).isoformat()
+
+        _save_preference_doc(doc)
+
+    except Exception as e:
+        print(f"[preferences] Non-fatal error for session {session_id}: {e}")
+
 
 # ==========================================
 # 5. API Endpoints
@@ -348,7 +497,7 @@ async def get_recommendations(request: Request, payload: QueryRequest):
             return {"data": [], "total": 0, "page": page, "size": size, "total_pages": 0, "debug": {**debug_info, "reason": "ID join returned 0 rows"}}
 
         columns_str = str(['m2', 'Beds', 'Baths', 'price_float'])
-        recommend_prompt = client.pull_prompt("recommend_prompt_v1")
+        recommend_prompt = client.pull_prompt("recommend_prompt")
         chain = recommend_prompt | llm
         raw_code = chain.invoke({"columns": columns_str, "query": query}).content.strip()
         code = clean_llm_code(raw_code)
@@ -439,19 +588,14 @@ async def chat_about_location(request: Request, payload: ChatRequest):
                 f"{'User' if isinstance(msg, HumanMessage) else 'Assistant'}: {msg.content}"
                 for msg in history
             )
-            rewrite_prompt = f"""Given the conversation history below, rewrite the follow-up question 
-into a fully self-contained, standalone search query. 
-Replace any pronouns or references like "it", "there", "that place", "that area" with their explicit names from the history.
-Return ONLY the rewritten query, nothing else.
+            rewrite_prompt = client.pull_prompt("chat_history_rewrite_prompt")
 
-Conversation history:
-{history_text}
-
-Follow-up question: {payload.question}
-
-Standalone search query:"""
-
-            rewritten = llm.invoke(rewrite_prompt)
+            rewrite_chain = rewrite_prompt | llm
+            
+            rewritten = rewrite_chain.invoke({
+                "history_text": history_text,
+                "question": payload.question
+            })
             retriever_query = rewritten.content.strip()
         else:
             # No history yet — use the question as-is
@@ -463,7 +607,7 @@ Standalone search query:"""
         context = "\n\n".join(doc.page_content for doc in retrieved_docs)
 
         # 5. Pull prompt from LangSmith (must include {context}, {chat_history}, {question})
-        location_prompt = client.pull_prompt("property_location_prompt_v1")
+        location_prompt = client.pull_prompt("property_location_prompt")
         chain = location_prompt | llm
 
         # 6. Invoke chain with context, history, and current question
@@ -479,6 +623,14 @@ Standalone search query:"""
         mongo_history.add_user_message(payload.question)
         mongo_history.add_ai_message(answer)
 
+        # 8. Batch preference extraction — runs an LLM call every N turns
+        #    using only the user-side messages for maximum accuracy.
+        maybe_update_preferences(
+            session_id=session_id,
+            all_messages=mongo_history.messages,
+            llm=llm
+        )
+
         return {
             "question": payload.question,
             "answer": answer,
@@ -490,6 +642,19 @@ Standalone search query:"""
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/chat/location/{session_id}/preferences")
+async def get_user_preferences(session_id: str):
+    """
+    Returns the current preference profile for a session.
+    The profile is built incrementally from the user's question history
+    and updated every PREFERENCE_EXTRACTION_EVERY_N_TURNS turns.
+    """
+    doc = _load_preference_doc(session_id)
+    # Remove internal Mongo _id before returning
+    doc.pop("_id", None)
+    return doc
 
 
 @app.delete("/chat/location/{session_id}")
@@ -567,7 +732,7 @@ async def compare_properties(request: Request, payload: CompareRequest):
         def format_docs(docs):
             return "\n\n".join(doc.page_content for doc in docs)
 
-        multi_context_prompt = client.pull_prompt("compare_multi_context_prompt_v1")
+        multi_context_prompt = client.pull_prompt("compare_multi_context_prompt")
 
         multi_context_chain = (
             {

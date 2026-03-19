@@ -1,0 +1,66 @@
+graph TD
+    %% Global Styling
+    classDef larger font-size:18px,font-weight:bold,padding:15px;
+    classDef storage fill:#dfd,stroke:#333,font-size:16px;
+    classDef database fill:#ffd,stroke:#333,font-size:16px;
+    classDef logic fill:#fff,stroke:#333,stroke-width:2px,font-size:16px;
+
+    %% Client Layer
+    User((User / Frontend)):::larger -->|API Requests| API
+
+    %% Main Logic Layer
+    subgraph FASTAPI["FASTAPI BACKEND SYSTEM"]
+        direction TB
+        API[FastAPI Gateway]:::larger
+        
+        API -->|1. Startup| Lifespan[Lifespan Manager]:::logic
+        Lifespan -->|Loads| Data[(Cleaned Properties CSV)]:::storage
+        Lifespan -->|Loads| XGB[XGBoost Price Model]:::storage
+        Lifespan -->|Initializes| Embed[Qwen Embedding Model]:::logic
+
+        %% Endpoints
+        API -->|POST /recommend| RecEngine[Recommendation Engine]:::logic
+        API -->|POST /chat/location| RAG[Location RAG Chat]:::logic
+        API -->|POST /compare| Compare[Comparison Engine]:::logic
+        API -->|POST /predict-price| PricePred[Price Predictor]:::logic
+        
+        %% Internal Logic Logic
+        RAG -->|History & Rewrite| MemoryMgr[MongoDB History Manager]:::logic
+        RAG -->|Periodic Extraction| PrefLogic[User Preference Engine]:::logic
+    end
+
+    %% Storage & AI Layer
+    subgraph AI["AI & DATA INFRASTRUCTURE"]
+        direction TB
+        RecEngine -->|Semantic Search| ChromaProp[(ChromaDB: Properties)]:::storage
+        RecEngine -->|Code Generation| Groq[[Groq: Llama 3.1]]:::larger
+        
+        RAG -->|Context Retrieval| ChromaLoc[(ChromaDB: Location Info)]:::storage
+        RAG -->|Reasoning| Groq
+        
+        Compare -->|Specs| Data
+        Compare -->|Context| ChromaLoc
+        Compare -->|Synthesis| Groq
+
+        PricePred -->|Feature Eng| XGB
+    end
+
+    %% Persistence Layer
+    subgraph PERSIST["PERSISTENCE LAYER (MONGODB)"]
+        MemoryMgr <-->|Store/Retrieve| ChatCol[(Collection: chat_history)]:::database
+        PrefLogic <-->|Upsert Profile| PrefCol[(Collection: user_preferences)]:::database
+    end
+
+    %% External Monitoring
+    subgraph OBSERV["OBSERVABILITY"]
+        Groq <-->|Traceable| LangSmith[LangSmith Client]:::logic
+        LangSmith -->|Fetch Prompts| Prompts[Prompt Hub]:::logic
+        PrefLogic -->|Pull Extraction Prompt| Prompts
+    end
+
+    %% Individual Style Overrides
+    style API fill:#f9f,stroke:#333,stroke-width:3px
+    style Groq fill:#69f,stroke:#333,stroke-width:3px,color:#fff
+    style FASTAPI fill:#f5f5f5,stroke:#333,stroke-width:2px
+    style AI fill:#f0f8ff,stroke:#333,stroke-width:2px
+    style PERSIST fill:#fff9e6,stroke:#333,stroke-dasharray: 5 5
