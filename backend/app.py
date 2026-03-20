@@ -22,7 +22,7 @@ from langchain_core.output_parsers import StrOutputParser
 
 from langsmith import traceable
 from langsmith import Client
-client = Client()  # Uses LANGSMITH_API_KEY env var
+client = Client()
 
 import json
 from datetime import datetime, timezone
@@ -72,16 +72,15 @@ class PaginatedPropertyResponse(BaseModel):
     size: int
     total_pages: int
 
-# ---- UPDATED: ChatRequest now accepts a session_id ----
 class ChatRequest(BaseModel):
     question: str
-    session_id: str = "default"  # Client provides a unique session ID per user/conversation
+    session_id: str = "default"
 
 class ChatResponse(BaseModel):
     question: str
     answer: str
     session_id: str
-    history_length: int  # Number of turns stored for this session
+    history_length: int
 
 class CompareRequest(BaseModel):
     id1: str
@@ -109,43 +108,52 @@ class PricePredictionResponse(BaseModel):
 MONGO_URI = os.environ.get("MONGO_URI")
 MONGO_DB_NAME = "nawy-property-recommender-v1"
 MONGO_COLLECTION_NAME = "chat_history"
-HISTORY_MESSAGES_LIMIT = 5  # Number of most recent messages to retrieve per session
+HISTORY_MESSAGES_LIMIT = 5
 
 # ==========================================
 # User Preference Profile Config
 # ==========================================
 MONGO_PREFERENCES_COLLECTION = "user_preferences"
-PREFERENCE_EXTRACTION_EVERY_N_TURNS = 3  # Extract preferences every N user turns
+PREFERENCE_EXTRACTION_EVERY_N_TURNS = 3
 
 USER_PREFERENCE_SCHEMA = {
-    "user_id": None,               # str  — equals session_id
-    "last_updated": None,          # ISO datetime string (UTC)
-    "preferred_locations": [],     # list[str] — locations & compounds the user mentions
-    "property_specs": {            # dict — structured property requirements
-        "types": [],               # list[str] e.g. ["apartment", "villa"]
-        "beds": None,              # int | null
-        "baths": None,             # int | null
-        "m2": None                 # float | null — desired area in sqm
+    "user_id": None,
+    "last_updated": None,
+    "preferred_locations": [],
+    "property_specs": {
+        "types": [],
+        "beds": None,
+        "baths": None,
+        "m2": None
     },
-    "budget_range": {              # dict — price range in EGP
-        "min": None,               # float | null
-        "max": None                # float | null
+    "budget_range": {
+        "min": None,
+        "max": None
     },
-    "lifestyle_preferences": [],   # list[str] — amenities, proximity needs, lifestyle tags
-    "investment_intent": None,     # bool | null — True if user signals ROI focus
-    "summary_of_intent": "",       # str — short LLM-generated plain-English vibe summary
-    "turn_counter": 0              # int — tracks how many user turns have been processed
+    "lifestyle_preferences": [],
+    "investment_intent": None,
+    "summary_of_intent": "",
+    "turn_counter": 0
 }
+
+# ==========================================
+# Compound RAG Prompt
+# ==========================================
+def _detect_intent(question: str, llm) -> str:
+    """Returns 'compound' or 'location'."""
+    intent_prompt = ChatPromptTemplate.from_template(
+        "Classify this real estate question into exactly one word: 'compound' if it asks about a specific compound, project, or developer, "
+        "or 'location' if it asks about an area, neighborhood, or city.\n\nQuestion: {question}\n\nAnswer with one word only:"
+    )
+    result = (intent_prompt | llm | StrOutputParser()).invoke({"question": question})
+    return "compound" if "compound" in result.strip().lower() else "location"
+
 
 # ==========================================
 # 3. App Lifespan (Startup & Shutdown)
 # ==========================================
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """
-    Loads all heavy assets (DataFrames, Embeddings models, Vector DBs, LLMs)
-    only once when the server starts up.
-    """
     print("Loading properties DataFrame...")
     app.state.df = pd.read_csv("nawy_properties_cleaned.csv", dtype={"id": str})
 
@@ -167,6 +175,13 @@ async def lifespan(app: FastAPI):
         embedding_function=embeddings
     )
     print("Location VectorDB loaded!")
+
+    print("Loading Compound Information VectorDB...")
+    app.state.compound_vectorstore = Chroma(
+        persist_directory="./compound_information_db",
+        embedding_function=embeddings
+    )
+    print("Compound VectorDB loaded!")
 
     print("Initializing Groq LLM...")
     groq_api_key = os.environ.get("GROQ_API_KEY")
@@ -190,9 +205,14 @@ async def lifespan(app: FastAPI):
         app.state.price_model = None
         app.state.price_encoder = None
 
+    print("Initializing shared MongoDB client...")
+    app.state.mongo_client = MongoClient(MONGO_URI)
+    print("MongoDB client ready!")
+
     print("🚀 API is ready!")
     yield
     print("Shutting down API...")
+    app.state.mongo_client.close()
 
 # ==========================================
 # 4. Initialize FastAPI App
@@ -216,7 +236,6 @@ app.add_middleware(
 )
 
 def clean_llm_code(raw_code: str) -> str:
-    """Helper to remove markdown backticks if the LLM hallucinated them."""
     cleaned = re.sub(r"^```python\n", "", raw_code, flags=re.IGNORECASE)
     cleaned = re.sub(r"^```\n", "", cleaned)
     cleaned = re.sub(r"```$", "", cleaned)
@@ -226,19 +245,13 @@ def clean_llm_code(raw_code: str) -> str:
 # ==========================================
 # User Preference Helpers
 # ==========================================
-def _get_preferences_collection():
-    """Return the MongoDB user_preferences collection."""
-    mongo_client = MongoClient(MONGO_URI)
+def _get_preferences_collection(mongo_client: MongoClient):
     db = mongo_client[MONGO_DB_NAME]
     return db[MONGO_PREFERENCES_COLLECTION]
 
 
-def _load_preference_doc(session_id: str) -> dict:
-    """
-    Load the preference document for this session from MongoDB.
-    If none exists yet, return a fresh copy of the schema with user_id set.
-    """
-    col = _get_preferences_collection()
+def _load_preference_doc(session_id: str, mongo_client: MongoClient) -> dict:
+    col = _get_preferences_collection(mongo_client)
     doc = col.find_one({"user_id": session_id})
     if doc is None:
         doc = dict(USER_PREFERENCE_SCHEMA)
@@ -246,9 +259,8 @@ def _load_preference_doc(session_id: str) -> dict:
     return doc
 
 
-def _save_preference_doc(doc: dict) -> None:
-    """Upsert the preference document back to MongoDB."""
-    col = _get_preferences_collection()
+def _save_preference_doc(doc: dict, mongo_client: MongoClient) -> None:
+    col = _get_preferences_collection(mongo_client)
     col.update_one(
         {"user_id": doc["user_id"]},
         {"$set": doc},
@@ -257,33 +269,24 @@ def _save_preference_doc(doc: dict) -> None:
 
 
 def _extract_preferences_from_history(new_user_messages: list[str], existing_profile: dict, llm) -> dict:
-    """
-    Run one LLM call on only the NEW user questions (since the last batch)
-    and merge the result into the existing profile.
-    """
     if not new_user_messages:
         return {}
 
     new_questions_text = "\n".join(f"- {msg}" for msg in new_user_messages)
 
-    # Strip internal bookkeeping fields — the LLM only sees preference fields
     current_profile_text = json.dumps(
         {k: v for k, v in existing_profile.items() if k not in ("user_id", "last_updated", "turn_counter", "_id")},
         indent=2
     )
 
     extraction_prompt = client.pull_prompt("extract_preferences_from_history_prompt")
-    
     preference_chain = extraction_prompt | llm
-    
     response = preference_chain.invoke({
         "current_profile_text": current_profile_text,
         "new_questions_text": new_questions_text
     })
-    
-    raw = response.content.strip()
 
-    # Strip accidental markdown fences
+    raw = response.content.strip()
     raw = re.sub(r"^```json\s*", "", raw, flags=re.IGNORECASE)
     raw = re.sub(r"^```\s*", "", raw)
     raw = re.sub(r"```$", "", raw)
@@ -294,28 +297,20 @@ def _extract_preferences_from_history(new_user_messages: list[str], existing_pro
         return {}
 
 
-def maybe_update_preferences(session_id: str, all_messages, llm) -> None:
-    """
-    Increments the turn counter and, every N turns, extracts preferences
-    from only the new user questions and merges them into the saved profile.
-    Failures are caught and logged so they never crash the chat endpoint.
-    """
+def maybe_update_preferences(session_id: str, all_messages, llm, mongo_client: MongoClient) -> None:
     try:
-        doc = _load_preference_doc(session_id)
+        doc = _load_preference_doc(session_id, mongo_client)
         doc["turn_counter"] = doc.get("turn_counter", 0) + 1
 
         if doc["turn_counter"] % PREFERENCE_EXTRACTION_EVERY_N_TURNS == 0:
-            # Count how many user messages were already processed in previous batches
             already_processed = doc.get("processed_user_message_count", 0)
 
-            # Collect only HumanMessage content — skip AI responses
             all_user_texts = [
                 msg.content
                 for msg in all_messages
                 if isinstance(msg, HumanMessage)
             ]
 
-            # Only the questions that are new since last extraction
             new_user_texts = all_user_texts[already_processed:]
 
             if new_user_texts:
@@ -330,12 +325,11 @@ def maybe_update_preferences(session_id: str, all_messages, llm) -> None:
                         if field in extracted:
                             doc[field] = extracted[field]
 
-                # Advance the pointer so next batch starts from here
                 doc["processed_user_message_count"] = len(all_user_texts)
 
             doc["last_updated"] = datetime.now(timezone.utc).isoformat()
 
-        _save_preference_doc(doc)
+        _save_preference_doc(doc, mongo_client)
 
     except Exception as e:
         print(f"[preferences] Non-fatal error for session {session_id}: {e}")
@@ -553,89 +547,89 @@ async def get_recommendations(request: Request, payload: QueryRequest):
 # ==========================================
 # 6. Chat Location with MongoDB Memory
 # ==========================================
-@app.post("/chat/location", response_model=ChatResponse)
+@app.post("/chat", response_model=ChatResponse)
 async def chat_about_location(request: Request, payload: ChatRequest):
-    """
-    RAG-based chat endpoint with MongoDB-persisted conversation memory.
-    History is stored in MongoDB per session_id, and the last 5 messages are
-    retrieved on each request.
-    """
     try:
         llm = request.app.state.llm
         location_vectorstore = request.app.state.location_vectorstore
+        compound_vectorstore = request.app.state.compound_vectorstore
 
         if not payload.question.strip():
             raise HTTPException(status_code=400, detail="Question cannot be empty.")
 
         session_id = payload.session_id
 
-        # 1. Load MongoDB-backed history for this session
         mongo_history = MongoDBChatMessageHistory(
-            connection_string=MONGO_URI,
+            connection=request.app.state.mongo_client,
             database_name=MONGO_DB_NAME,
             collection_name=MONGO_COLLECTION_NAME,
             session_id=session_id,
         )
 
-        # 2. Retrieve the last N messages to pass as context (avoids token overflow)
-        history = mongo_history.messages[-HISTORY_MESSAGES_LIMIT:]
+        history_messages = mongo_history.messages[-HISTORY_MESSAGES_LIMIT:]
 
-        # 3. Rewrite the user's question into a standalone query using chat history.
-        #    This resolves references like "it", "there", "that area" into explicit terms
-        #    so the vector DB retriever can find the correct documents.
-        if history:
-            history_text = "\n".join(
-                f"{'User' if isinstance(msg, HumanMessage) else 'Assistant'}: {msg.content}"
-                for msg in history
-            )
+        if history_messages:
             rewrite_prompt = client.pull_prompt("chat_history_rewrite_prompt")
-
-            rewrite_chain = rewrite_prompt | llm
-            
-            rewritten = rewrite_chain.invoke({
-                "history_text": history_text,
+            retriever_query = (rewrite_prompt | llm | StrOutputParser()).invoke({
+                "chat_history": history_messages,
                 "question": payload.question
             })
-            retriever_query = rewritten.content.strip()
         else:
-            # No history yet — use the question as-is
             retriever_query = payload.question
 
-        # 4. Retrieve relevant location context via RAG using the rewritten query
-        retriever = location_vectorstore.as_retriever(search_kwargs={"k": 5})
-        retrieved_docs = retriever.invoke(retriever_query)
-        context = "\n\n".join(doc.page_content for doc in retrieved_docs)
+        intent = _detect_intent(retriever_query, llm)
 
-        # 5. Pull prompt from LangSmith (must include {context}, {chat_history}, {question})
-        location_prompt = client.pull_prompt("property_location_prompt")
-        chain = location_prompt | llm
+        compound_prompt = ChatPromptTemplate.from_messages([
+            ("system", """You are an expert Real Estate Consultant specializing in the Egyptian market.
+Your goal is to provide accurate, professional, and helpful information about compounds and properties based on the data provided.
 
-        # 6. Invoke chain with context, history, and current question
-        response = chain.invoke({
-            "context": context,
-            "chat_history": history,
-            "question": payload.question
-        })
+Strict Guidelines:
+1. Answer ONLY using the context below. Do not invent amenities or prices.
+2. If the context doesn't mention a specific detail (like 'delivery date' or 'down payment'), clearly state that it is not specified.
+3. Highlight key selling points like location, developer reputation, and unique facilities.
+4. Keep the tone professional, persuasive, and data-driven.
+
+Context:
+{context}"""),
+            ("placeholder", "{chat_history}"),
+            ("human", "{question}"),
+        ])
+
+        if intent == "compound":
+            retrieved_docs = compound_vectorstore.as_retriever(search_kwargs={"k": 5}).invoke(retriever_query)
+            context = "\n\n".join(doc.page_content for doc in retrieved_docs)
+            response = (compound_prompt | llm).invoke({
+                "context": context,
+                "chat_history": history_messages,
+                "question": payload.question
+            })
+        else:
+            retrieved_docs = location_vectorstore.as_retriever(search_kwargs={"k": 5}).invoke(retriever_query)
+            context = "\n\n".join(doc.page_content for doc in retrieved_docs)
+            location_prompt = client.pull_prompt("property_location_prompt")
+            response = (location_prompt | llm).invoke({
+                "context": context,
+                "chat_history": history_messages,
+                "question": payload.question
+            })
 
         answer = response.content.strip()
 
-        # 7. Persist this turn to MongoDB
         mongo_history.add_user_message(payload.question)
         mongo_history.add_ai_message(answer)
 
-        # 8. Batch preference extraction — runs an LLM call every N turns
-        #    using only the user-side messages for maximum accuracy.
         maybe_update_preferences(
             session_id=session_id,
             all_messages=mongo_history.messages,
-            llm=llm
+            llm=llm,
+            mongo_client=request.app.state.mongo_client
         )
 
         return {
             "question": payload.question,
             "answer": answer,
             "session_id": session_id,
-            "history_length": len(mongo_history.messages) // 2  # Total turns stored
+            "history_length": len(mongo_history.messages) // 2
         }
 
     except HTTPException:
@@ -644,27 +638,17 @@ async def chat_about_location(request: Request, payload: ChatRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.get("/chat/location/{session_id}/preferences")
-async def get_user_preferences(session_id: str):
-    """
-    Returns the current preference profile for a session.
-    The profile is built incrementally from the user's question history
-    and updated every PREFERENCE_EXTRACTION_EVERY_N_TURNS turns.
-    """
-    doc = _load_preference_doc(session_id)
-    # Remove internal Mongo _id before returning
+@app.get("/chat/{session_id}/preferences")
+async def get_user_preferences(session_id: str, request: Request):
+    doc = _load_preference_doc(session_id, request.app.state.mongo_client)
     doc.pop("_id", None)
     return doc
 
 
-@app.delete("/chat/location/{session_id}")
-async def clear_chat_history(session_id: str):
-    """
-    Clears the conversation history for a given session_id from MongoDB.
-    Useful for 'New Chat' / 'Clear History' buttons on the frontend.
-    """
+@app.delete("/chat/{session_id}")
+async def clear_chat_history(session_id: str, request: Request):
     mongo_history = MongoDBChatMessageHistory(
-        connection_string=MONGO_URI,
+        connection=request.app.state.mongo_client,
         database_name=MONGO_DB_NAME,
         collection_name=MONGO_COLLECTION_NAME,
         session_id=session_id,
@@ -673,14 +657,10 @@ async def clear_chat_history(session_id: str):
     return {"message": f"History cleared for session '{session_id}'"}
 
 
-@app.get("/chat/location/{session_id}/history")
-async def get_chat_history(session_id: str):
-    """
-    Returns the full conversation history for a session from MongoDB.
-    Useful for debugging or restoring UI state.
-    """
+@app.get("/chat/{session_id}/history")
+async def get_chat_history(session_id: str, request: Request):
     mongo_history = MongoDBChatMessageHistory(
-        connection_string=MONGO_URI,
+        connection=request.app.state.mongo_client,
         database_name=MONGO_DB_NAME,
         collection_name=MONGO_COLLECTION_NAME,
         session_id=session_id,

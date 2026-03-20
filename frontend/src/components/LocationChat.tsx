@@ -60,7 +60,7 @@ export function LocationChat({ apiBaseUrl, isCompareBarVisible = false }: Locati
     if (isOpen && sessionId) {
       const fetchHistory = async () => {
         try {
-          const response = await fetch(`${apiBaseUrl}/chat/location/${sessionId}/history`);
+          const response = await fetch(`${apiBaseUrl}/chat/${sessionId}/history`);
           if (response.ok) {
             const data = await response.json();
             if (data.history && data.history.length > 0) {
@@ -122,7 +122,7 @@ export function LocationChat({ apiBaseUrl, isCompareBarVisible = false }: Locati
     setIsLoading(true);
 
     try {
-      const response = await fetch(`${apiBaseUrl}/chat/location`, {
+      const response = await fetch(`${apiBaseUrl}/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
@@ -166,7 +166,7 @@ export function LocationChat({ apiBaseUrl, isCompareBarVisible = false }: Locati
   const clearChat = async () => {
     try {
       // Clear history on backend
-      await fetch(`${apiBaseUrl}/chat/location/${sessionId}`, {
+      await fetch(`${apiBaseUrl}/chat/${sessionId}`, {
         method: "DELETE"
       });
       

@@ -14,6 +14,7 @@ interface Message {
   timestamp: Date;
 }
 
+
 const API_BASE_URL = "https://ahmed-ayman-nawy-property-recommender.hf.space";
 
 export default function ChatPage() {
@@ -59,7 +60,7 @@ export default function ChatPage() {
 
     const fetchHistory = async () => {
       try {
-        const response = await fetch(`${API_BASE_URL}/chat/location/${sessionId}/history`);
+        const response = await fetch(`${API_BASE_URL}/chat/${sessionId}/history`);
         if (response.ok) {
           const data = await response.json();
           if (data.history && data.history.length > 0) {
@@ -105,7 +106,7 @@ export default function ChatPage() {
     setIsLoading(true);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/chat/location`, {
+      const response = await fetch(`${API_BASE_URL}/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
@@ -150,7 +151,7 @@ export default function ChatPage() {
   const clearChat = async () => {
     if (confirm("Are you sure you want to clear this conversation?")) {
       try {
-        await fetch(`${API_BASE_URL}/chat/location/${sessionId}`, {
+        await fetch(`${API_BASE_URL}/chat/${sessionId}`, {
           method: "DELETE"
         });
         
@@ -339,6 +340,7 @@ export default function ChatPage() {
             </div>
           </div>
         </div>
+
       </main>
 
       {/* Floating hints or badges could go here */}
