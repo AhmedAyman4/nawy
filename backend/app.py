@@ -658,8 +658,16 @@ async def compare_properties(request: Request, payload: CompareRequest):
             return get_properties_context(inputs["id1"], inputs["id2"])
 
         def location_retriever(inputs):
-            query = f"locations of properties {inputs['id1']} and {inputs['id2']}"
-            return vectorstore.as_retriever(search_kwargs={"k": 5}).invoke(query)
+            ids = [str(inputs["id1"]), str(inputs["id2"])]
+            selected = df[df['id'].isin(ids)]
+            query_parts = []
+            for _, row in selected.iterrows():
+                if pd.notna(row.get('location')):
+                    query_parts.append(str(row['location']))
+                if pd.notna(row.get('description')):
+                    query_parts.append(str(row['description']))
+            query = " ".join(query_parts) if query_parts else f"locations of properties {inputs['id1']} and {inputs['id2']}"
+            return vectorstore.as_retriever(search_kwargs={"k": 7}).invoke(query)
 
         def format_docs(docs):
             return "\n\n".join(doc.page_content for doc in docs)

@@ -50,6 +50,10 @@ nawy/
 - **Location Insights**: Chatbot that answers questions about specific areas/compounds using RAG (Retrieval-Augmented Generation).
 - **Property Comparison**: Ask the AI to compare two properties to get a detailed pros/cons analysis and recommendation.
 
+**Chat Endpoint Sequence Diagram**
+
+![Chat Endpoint Sequence Diagram](backend/assets/chat-endpoint-sequence-diagram.png)
+
 **Compare Parallel RAG sequence diagram**
 
 ![Compare Parallel RAG sequence diagram](backend/assets/Compare-Parallel-RAG-sequence-diagram.png)

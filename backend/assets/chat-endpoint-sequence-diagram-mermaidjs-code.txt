@@ -1,0 +1,45 @@
+sequenceDiagram
+    autonumber
+    rect rgb(240, 248, 255)
+    Note over User, API: Request Phase
+    User->>API: POST /chat (question, session_id)
+    API->>MongoDB: Initialize MongoDBChatMessageHistory
+    MongoDB-->>API: Return existing history_messages
+    end
+
+    rect rgb(255, 249, 230)
+    Note over API, Groq: Retrieval Augmented Generation (RAG)
+    alt history_messages exists
+        API->>LangSmith: Pull "chat_history_rewrite_prompt"
+        API->>Groq: Rewrite question based on history
+        Groq-->>API: Return retriever_query
+    else No history
+        Note over API: retriever_query = original question
+    end
+
+    API->>ChromaLoc: Similarity Search (k=7)
+    ChromaLoc-->>API: Return retrieved_docs (context)
+    end
+
+    rect rgb(245, 245, 245)
+    Note over API, Groq: Response Generation
+    API->>LangSmith: Pull "property_location_prompt"
+    API->>Groq: Generate answer (context + history + question)
+    Groq-->>API: Return answer
+    end
+
+    rect rgb(230, 255, 230)
+    Note over API, MongoDB: Persistence & Preferences
+    API->>MongoDB: Save User Message & AI Answer
+    
+    par Async Preference Update
+        API->>API: maybe_update_preferences()
+        Note right of API: If turn_counter % 3 == 0
+        API->>LangSmith: Pull "extract_preferences_from_history_prompt"
+        API->>Groq: Extract profile fields
+        Groq-->>API: New JSON Profile
+        API->>MongoDB: Upsert user_preferences collection
+    end
+    end
+
+    API-->>User: ChatResponse (answer, session_id, history_length)
