@@ -47,7 +47,7 @@ export default function ChatPage() {
     {
       id: "welcome",
       type: "bot",
-      text: "Welcome to the **Nawy Location Intelligence** center.\r\n\r\nI'm here to help you explore the finest neighborhoods and investment hotspots in Egypt. Ask me about:\r\n\r\n*   **Neighborhood Vibes**: What's it like living in New Cairo vs. Sheikh Zayed?\r\n*   **Commute & Connectivity**: How easy is it to get to the New Capital?\r\n*   **Lifestyle & Amenities**: Where can I find the best schools or sporting clubs?\r\n*   **Investment Potential**: Which areas are showing the fastest growth?\r\n\r\nHow can I guide your search today?",
+      text: "Welcome! I'm here to help you explore the best locations and compounds in Egypt. Feel free to ask about any area or project listed on Nawy!",
       timestamp: new Date(),
     },
   ]);
@@ -217,7 +217,7 @@ export default function ChatPage() {
               .chat-markdown :global(ul) { list-style-type: disc; padding-left: 1.5rem; margin-bottom: 0.75rem; }
               .chat-markdown :global(ol) { list-style-type: decimal; padding-left: 1.5rem; margin-bottom: 0.75rem; }
               .chat-markdown :global(strong) { font-weight: 800; color: #1A365D; }
-              .chat-markdown :global(table) { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.85rem; border-radius: 8px; overflow: hidden; }
+              .chat-markdown :global(table) { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.95rem; border-radius: 8px; overflow: hidden; }
               .chat-markdown :global(th), .chat-markdown :global(td) { border: 1px solid #e2e8f0; padding: 0.75rem; text-align: left; }
               .chat-markdown :global(th) { background-color: #f8fafc; font-weight: 700; color: #003D6B; }
             `}</style>
@@ -238,13 +238,13 @@ export default function ChatPage() {
                 </div>
                 
                 <div
-                  className={`max-w-[88%] sm:max-w-2xl px-4 py-3 sm:px-6 sm:py-4 rounded-2xl sm:rounded-3xl text-xs sm:text-sm ${
+                  className={`max-w-[88%] sm:max-w-2xl px-4 py-3 sm:px-6 sm:py-4 rounded-2xl sm:rounded-3xl text-sm sm:text-base ${
                     m.type === "user"
                       ? "bg-[#003D6B] text-white rounded-tr-none shadow-xl"
                       : "bg-white text-slate-700 rounded-tl-none shadow-md border border-slate-100"
                   }`}
                 >
-                  <div className="chat-markdown prose prose-slate max-w-none">
+                  <div className="chat-markdown prose prose-sm sm:prose-base prose-slate max-w-none">
                     <ReactMarkdown remarkPlugins={[remarkGfm]}>
                     {m.text}
                     </ReactMarkdown>

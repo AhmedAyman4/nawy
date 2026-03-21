@@ -137,19 +137,6 @@ USER_PREFERENCE_SCHEMA = {
 }
 
 # ==========================================
-# Compound RAG Prompt
-# ==========================================
-def _detect_intent(question: str, llm) -> str:
-    """Returns 'compound' or 'location'."""
-    intent_prompt = ChatPromptTemplate.from_template(
-        "Classify this real estate question into exactly one word: 'compound' if it asks about a specific compound, project, or developer, "
-        "or 'location' if it asks about an area, neighborhood, or city.\n\nQuestion: {question}\n\nAnswer with one word only:"
-    )
-    result = (intent_prompt | llm | StrOutputParser()).invoke({"question": question})
-    return "compound" if "compound" in result.strip().lower() else "location"
-
-
-# ==========================================
 # 3. App Lifespan (Startup & Shutdown)
 # ==========================================
 @asynccontextmanager
@@ -169,19 +156,12 @@ async def lifespan(app: FastAPI):
         embedding_function=embeddings
     )
 
-    print("Loading Location Information VectorDB...")
-    app.state.location_vectorstore = Chroma(
-        persist_directory="./location_information_db",
+    print("Loading Locations and Compounds VectorDB...")
+    app.state.locations_and_compounds_vectorstore = Chroma(
+        persist_directory="./locations_and_compounds_db",
         embedding_function=embeddings
     )
-    print("Location VectorDB loaded!")
-
-    print("Loading Compound Information VectorDB...")
-    app.state.compound_vectorstore = Chroma(
-        persist_directory="./compound_information_db",
-        embedding_function=embeddings
-    )
-    print("Compound VectorDB loaded!")
+    print("Locations and Compounds VectorDB loaded!")
 
     print("Initializing Groq LLM...")
     groq_api_key = os.environ.get("GROQ_API_KEY")
@@ -192,7 +172,7 @@ async def lifespan(app: FastAPI):
         model="llama-3.1-8b-instant",
         api_key=groq_api_key,
         temperature=0,
-        max_tokens=1000
+        max_tokens=2000
     )
 
     print("Loading Price Prediction Models...")
@@ -551,8 +531,7 @@ async def get_recommendations(request: Request, payload: QueryRequest):
 async def chat_about_location(request: Request, payload: ChatRequest):
     try:
         llm = request.app.state.llm
-        location_vectorstore = request.app.state.location_vectorstore
-        compound_vectorstore = request.app.state.compound_vectorstore
+        vectorstore = request.app.state.locations_and_compounds_vectorstore
 
         if not payload.question.strip():
             raise HTTPException(status_code=400, detail="Question cannot be empty.")
@@ -560,7 +539,7 @@ async def chat_about_location(request: Request, payload: ChatRequest):
         session_id = payload.session_id
 
         mongo_history = MongoDBChatMessageHistory(
-            connection=request.app.state.mongo_client,
+            connection_string=MONGO_URI,
             database_name=MONGO_DB_NAME,
             collection_name=MONGO_COLLECTION_NAME,
             session_id=session_id,
@@ -577,41 +556,14 @@ async def chat_about_location(request: Request, payload: ChatRequest):
         else:
             retriever_query = payload.question
 
-        intent = _detect_intent(retriever_query, llm)
-
-        compound_prompt = ChatPromptTemplate.from_messages([
-            ("system", """You are an expert Real Estate Consultant specializing in the Egyptian market.
-Your goal is to provide accurate, professional, and helpful information about compounds and properties based on the data provided.
-
-Strict Guidelines:
-1. Answer ONLY using the context below. Do not invent amenities or prices.
-2. If the context doesn't mention a specific detail (like 'delivery date' or 'down payment'), clearly state that it is not specified.
-3. Highlight key selling points like location, developer reputation, and unique facilities.
-4. Keep the tone professional, persuasive, and data-driven.
-
-Context:
-{context}"""),
-            ("placeholder", "{chat_history}"),
-            ("human", "{question}"),
-        ])
-
-        if intent == "compound":
-            retrieved_docs = compound_vectorstore.as_retriever(search_kwargs={"k": 5}).invoke(retriever_query)
-            context = "\n\n".join(doc.page_content for doc in retrieved_docs)
-            response = (compound_prompt | llm).invoke({
-                "context": context,
-                "chat_history": history_messages,
-                "question": payload.question
-            })
-        else:
-            retrieved_docs = location_vectorstore.as_retriever(search_kwargs={"k": 5}).invoke(retriever_query)
-            context = "\n\n".join(doc.page_content for doc in retrieved_docs)
-            location_prompt = client.pull_prompt("property_location_prompt")
-            response = (location_prompt | llm).invoke({
-                "context": context,
-                "chat_history": history_messages,
-                "question": payload.question
-            })
+        retrieved_docs = vectorstore.as_retriever(search_kwargs={"k": 7}).invoke(retriever_query)
+        context = "\n\n".join(doc.page_content for doc in retrieved_docs)
+        location_prompt = client.pull_prompt("property_location_prompt")
+        response = (location_prompt | llm).invoke({
+            "context": context,
+            "chat_history": history_messages,
+            "question": payload.question
+        })
 
         answer = response.content.strip()
 
@@ -646,9 +598,9 @@ async def get_user_preferences(session_id: str, request: Request):
 
 
 @app.delete("/chat/{session_id}")
-async def clear_chat_history(session_id: str, request: Request):
+async def clear_chat_history(session_id: str):
     mongo_history = MongoDBChatMessageHistory(
-        connection=request.app.state.mongo_client,
+        connection_string=MONGO_URI,
         database_name=MONGO_DB_NAME,
         collection_name=MONGO_COLLECTION_NAME,
         session_id=session_id,
@@ -658,9 +610,9 @@ async def clear_chat_history(session_id: str, request: Request):
 
 
 @app.get("/chat/{session_id}/history")
-async def get_chat_history(session_id: str, request: Request):
+async def get_chat_history(session_id: str):
     mongo_history = MongoDBChatMessageHistory(
-        connection=request.app.state.mongo_client,
+        connection_string=MONGO_URI,
         database_name=MONGO_DB_NAME,
         collection_name=MONGO_COLLECTION_NAME,
         session_id=session_id,
@@ -681,7 +633,7 @@ async def get_chat_history(session_id: str, request: Request):
 async def compare_properties(request: Request, payload: CompareRequest):
     try:
         df = request.app.state.df
-        vectorstore = request.app.state.location_vectorstore
+        vectorstore = request.app.state.locations_and_compounds_vectorstore
         llm = request.app.state.llm
 
         def get_properties_context(id1, id2, dataframe=df):

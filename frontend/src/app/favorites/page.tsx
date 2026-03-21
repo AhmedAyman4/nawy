@@ -124,71 +124,70 @@ export default function FavoritesPage() {
             </div>
           </div>
         )}
-
-        {/* Floating Compare Bar */}
-        {selectedForCompare.length > 0 && (
-          <div className="fixed bottom-4 sm:bottom-8 left-1/2 -translate-x-1/2 z-40 animate-in slide-in-from-bottom-10 duration-500 w-[calc(100%-2rem)] sm:w-auto">
-            <div className="bg-white/90 backdrop-blur-xl border border-white/20 shadow-[0_10px_40px_rgba(0,0,0,0.15)] rounded-2xl sm:rounded-full px-4 sm:px-6 py-3 sm:py-4 flex flex-row items-center gap-3 sm:gap-6">
-              <div className="flex -space-x-3 sm:-space-x-4 items-center shrink-0">
-                {selectedProperties.map((p: PropertyData, i: number) => (
-                  <div key={p.id} className="relative group shrink-0">
-                    <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 sm:border-4 border-white overflow-hidden shadow-md transition-transform group-hover:scale-110 z-${20-i}`}>
-                      <img src={p.cover_image || ""} alt="" className="w-full h-full object-cover" />
-                    </div>
-                    <button 
-                        onClick={() => handleCompareToggle(p.id.toString())}
-                        className="absolute -top-1 -right-1 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
-                    >
-                        <X className="w-3 h-3" />
-                    </button>
-                  </div>
-                ))}
-                {selectedForCompare.length < 2 && (
-                    <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 sm:border-4 border-white border-dashed bg-slate-50 flex items-center justify-center text-slate-300">
-                        <Scale className="w-4 h-4 sm:w-5 sm:h-5" />
-                    </div>
-                )}
-              </div>
-
-              <div className="hidden xs:block h-8 w-px bg-slate-200" />
-
-              <div className="flex flex-col min-w-0 flex-1">
-                <span className="text-[9px] font-black uppercase tracking-widest text-[#5DBDB6]">
-                    Property Comparison
-                </span>
-                <span className="text-[10px] sm:text-xs font-bold text-[#1A365D] truncate">
-                    {selectedForCompare.length === 1 
-                        ? "Select one more to compare" 
-                        : "Ready to compare properties"}
-                </span>
-              </div>
-
-              <div className="flex items-center gap-1 sm:gap-2 shrink-0">
-                <button
-                    onClick={clearComparison}
-                    className="p-2 sm:p-3 text-slate-300 hover:text-red-500 transition-colors"
-                    title="Clear selected"
-                >
-                    <Trash2 className="w-4 h-4 sm:w-5 sm:h-5" />
-                </button>
-                <button
-                    disabled={selectedForCompare.length < 2}
-                    onClick={() => {
-                      if (selectedForCompare.length === 2) {
-                        localStorage.setItem('compare_properties', JSON.stringify(selectedProperties));
-                        router.push(`/compare?id1=${selectedForCompare[0]}&id2=${selectedForCompare[1]}`);
-                      }
-                    }}
-                    className="bg-gradient-to-r from-[#5DBDB6] to-[#003D6B] text-white px-4 sm:px-8 py-2.5 sm:py-3 rounded-full font-black text-[10px] sm:text-xs shadow-lg shadow-[#003D6B]/20 transition-all hover:scale-105 active:scale-95 disabled:opacity-50 disabled:grayscale disabled:scale-100 disabled:cursor-not-allowed flex items-center gap-2"
-                >
-                    <Scale className="w-3 h-3 sm:w-4 sm:h-4" /> <span className="hidden xs:inline">Compare Now</span><span className="xs:hidden">Compare</span>
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
       </main>
 
+      {/* Floating Compare Bar - Moved outside main for better stacking context */}
+      {selectedForCompare.length > 0 && (
+        <div className="fixed bottom-4 sm:bottom-8 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-bottom-10 duration-500 w-[calc(100%-2rem)] sm:w-auto">
+          <div className="bg-white/90 backdrop-blur-xl border border-white/20 shadow-[0_10px_40px_rgba(0,0,0,0.15)] rounded-2xl sm:rounded-full px-4 sm:px-6 py-3 sm:py-4 flex flex-row items-center gap-3 sm:gap-6">
+            <div className="flex -space-x-3 sm:-space-x-4 items-center shrink-0">
+              {selectedProperties.map((p: PropertyData, i: number) => (
+                <div key={p.id} className="relative group shrink-0">
+                  <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 sm:border-4 border-white overflow-hidden shadow-md transition-transform group-hover:scale-110 z-${20-i}`}>
+                    <img src={p.cover_image || ""} alt="" className="w-full h-full object-cover" />
+                  </div>
+                  <button 
+                      onClick={() => handleCompareToggle(p.id.toString())}
+                      className="absolute -top-1 -right-1 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
+                  >
+                      <X className="w-3 h-3" />
+                  </button>
+                </div>
+              ))}
+              {selectedForCompare.length < 2 && (
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 sm:border-4 border-white border-dashed bg-slate-50 flex items-center justify-center text-slate-300">
+                      <Scale className="w-4 h-4 sm:w-5 sm:h-5" />
+                  </div>
+              )}
+            </div>
+
+            <div className="hidden xs:block h-8 w-px bg-slate-200" />
+
+            <div className="flex flex-col min-w-0 flex-1">
+              <span className="text-[9px] font-black uppercase tracking-widest text-[#5DBDB6]">
+                  Property Comparison
+              </span>
+              <span className="text-[10px] sm:text-xs font-bold text-[#1A365D] truncate">
+                  {selectedForCompare.length === 1 
+                      ? "Select one more to compare" 
+                      : "Ready to compare properties"}
+              </span>
+            </div>
+
+            <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+              <button
+                  onClick={clearComparison}
+                  className="p-2 sm:p-3 text-slate-300 hover:text-red-500 transition-colors"
+                  title="Clear selected"
+              >
+                  <Trash2 className="w-4 h-4 sm:w-5 sm:h-5" />
+              </button>
+              <button
+                  disabled={selectedForCompare.length < 2}
+                  onClick={() => {
+                    if (selectedForCompare.length === 2) {
+                      localStorage.setItem('compare_properties', JSON.stringify(selectedProperties));
+                      router.push(`/compare?id1=${selectedForCompare[0]}&id2=${selectedForCompare[1]}`);
+                    }
+                  }}
+                  className="bg-gradient-to-r from-[#5DBDB6] to-[#003D6B] text-white px-4 sm:px-8 py-2.5 sm:py-3 rounded-full font-black text-[10px] sm:text-xs shadow-lg shadow-[#003D6B]/20 transition-all hover:scale-105 active:scale-95 disabled:opacity-50 disabled:grayscale disabled:scale-100 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                  <Scale className="w-3 h-3 sm:w-4 sm:h-4" /> <span className="hidden xs:inline">Compare Now</span><span className="xs:hidden">Compare</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Modal Overlay */}
       {selectedIndex !== null && favorites[selectedIndex] && (
         <PropertyModal

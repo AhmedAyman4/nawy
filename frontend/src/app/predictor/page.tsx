@@ -125,7 +125,7 @@ export default function PredictorPage() {
                 <Sparkles className="w-3 h-3 text-[#5DBDB6]" />
                 Powered by XGBoost & AI
             </div>
-          <h1 className="text-3xl md:text-5xl font-black text-[#003D6B] mb-6 tracking-tight">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-[#003D6B] mb-6 tracking-tight">
             Predict Property <span className="text-[#5DBDB6]">Prices.</span>
           </h1>
           <p className="text-slate-500 text-base md:text-lg max-w-2xl mx-auto font-medium">
