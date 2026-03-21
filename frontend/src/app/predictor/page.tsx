@@ -99,7 +99,13 @@ export default function PredictorPage() {
   };
 
   const increment = (field: "Beds" | "Baths" | "m2", step: number = 1) => {
-    setFormData(prev => ({ ...prev, [field]: prev[field] + step }));
+    setFormData(prev => {
+      const newValue = prev[field] + step;
+      if ((field === "Beds" || field === "Baths") && newValue > 6) {
+        return prev;
+      }
+      return { ...prev, [field]: newValue };
+    });
   };
 
   const decrement = (field: "Beds" | "Baths" | "m2", step: number = 1) => {
@@ -217,7 +223,8 @@ export default function PredictorPage() {
                     <button 
                       type="button" 
                       onClick={() => decrement("m2", 10)}
-                      className="w-10 h-10 flex items-center justify-center rounded-xl bg-white border border-slate-100 text-[#003D6B] hover:bg-[#5DBDB6]/10 hover:text-[#5DBDB6] transition-all font-black text-lg active:scale-95"
+                      disabled={formData.m2 <= 10}
+                      className="w-10 h-10 flex items-center justify-center rounded-xl bg-white border border-slate-100 text-[#003D6B] hover:bg-[#5DBDB6]/10 hover:text-[#5DBDB6] transition-all font-black text-lg active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-white disabled:hover:text-[#003D6B]"
                     >
                       -
                     </button>
@@ -248,7 +255,8 @@ export default function PredictorPage() {
                       <button 
                         type="button" 
                         onClick={() => decrement("Beds")}
-                        className="w-10 h-10 flex items-center justify-center rounded-xl bg-white border border-slate-100 text-[#003D6B] hover:bg-[#5DBDB6]/10 hover:text-[#5DBDB6] transition-all font-black text-lg active:scale-95"
+                        disabled={formData.Beds <= 1}
+                        className="w-10 h-10 flex items-center justify-center rounded-xl bg-white border border-slate-100 text-[#003D6B] hover:bg-[#5DBDB6]/10 hover:text-[#5DBDB6] transition-all font-black text-lg active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-white disabled:hover:text-[#003D6B]"
                       >
                         -
                       </button>
@@ -256,7 +264,8 @@ export default function PredictorPage() {
                       <button 
                         type="button" 
                         onClick={() => increment("Beds")}
-                        className="w-10 h-10 flex items-center justify-center rounded-xl bg-white border border-slate-100 text-[#003D6B] hover:bg-[#5DBDB6]/10 hover:text-[#5DBDB6] transition-all font-black text-lg active:scale-95"
+                        disabled={formData.Beds >= 6}
+                        className="w-10 h-10 flex items-center justify-center rounded-xl bg-white border border-slate-100 text-[#003D6B] hover:bg-[#5DBDB6]/10 hover:text-[#5DBDB6] transition-all font-black text-lg active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-white disabled:hover:text-[#003D6B]"
                       >
                         +
                       </button>
@@ -272,7 +281,8 @@ export default function PredictorPage() {
                       <button 
                         type="button" 
                         onClick={() => decrement("Baths")}
-                        className="w-10 h-10 flex items-center justify-center rounded-xl bg-white border border-slate-100 text-[#003D6B] hover:bg-[#5DBDB6]/10 hover:text-[#5DBDB6] transition-all font-black text-lg active:scale-95"
+                        disabled={formData.Baths <= 1}
+                        className="w-10 h-10 flex items-center justify-center rounded-xl bg-white border border-slate-100 text-[#003D6B] hover:bg-[#5DBDB6]/10 hover:text-[#5DBDB6] transition-all font-black text-lg active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-white disabled:hover:text-[#003D6B]"
                       >
                         -
                       </button>
@@ -280,7 +290,8 @@ export default function PredictorPage() {
                       <button 
                         type="button" 
                         onClick={() => increment("Baths")}
-                        className="w-10 h-10 flex items-center justify-center rounded-xl bg-white border border-slate-100 text-[#003D6B] hover:bg-[#5DBDB6]/10 hover:text-[#5DBDB6] transition-all font-black text-lg active:scale-95"
+                        disabled={formData.Baths >= 6}
+                        className="w-10 h-10 flex items-center justify-center rounded-xl bg-white border border-slate-100 text-[#003D6B] hover:bg-[#5DBDB6]/10 hover:text-[#5DBDB6] transition-all font-black text-lg active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-white disabled:hover:text-[#003D6B]"
                       >
                         +
                       </button>
