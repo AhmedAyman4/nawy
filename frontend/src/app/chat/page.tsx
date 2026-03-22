@@ -7,11 +7,16 @@ import Image from "next/image";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
+import { PropertyData } from "@/types/property";
+import { PropertyCard } from "@/components/PropertyCard";
+import { PropertyModal } from "@/components/PropertyModal";
+
 interface Message {
   id: string;
   type: "user" | "bot";
   text: string;
   timestamp: Date;
+  properties?: PropertyData[];
 }
 
 
@@ -52,6 +57,12 @@ export default function ChatPage() {
     },
   ]);
   const [isLoading, setIsLoading] = useState(false);
+  const [selectedProperty, setSelectedProperty] = useState<{
+    property: PropertyData;
+    index: number;
+    total: number;
+    messageId: string;
+  } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Fetch history when page loads
@@ -124,6 +135,7 @@ export default function ChatPage() {
         type: "bot",
         text: data.answer,
         timestamp: new Date(),
+        properties: data.properties,
       };
       setMessages((prev) => [...prev, botMessage]);
     } catch (err) {
@@ -249,6 +261,31 @@ export default function ChatPage() {
                     {m.text}
                     </ReactMarkdown>
                   </div>
+                  {m.properties && m.properties.length > 0 && (
+                    <div className="mt-4 -mx-2 sm:-mx-4 overflow-x-auto pb-4 custom-scrollbar">
+                      <div className="flex gap-3 px-2 sm:px-4 min-w-max">
+                        {m.properties.map((prop, idx) => (
+                          <div key={prop.id || idx} className="w-48 sm:w-56">
+                            <PropertyCard 
+                              property={prop} 
+                              onClick={() => setSelectedProperty({
+                                property: prop,
+                                index: idx,
+                                total: m.properties!.length,
+                                messageId: m.id
+                              })}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                      <div className="px-4 mt-2">
+                         <span className="text-[9px] font-black uppercase tracking-tighter text-[#5DBDB6]/60">
+                           Horizontal Scroll to see more properties &rarr;
+                         </span>
+                      </div>
+                    </div>
+                  )}
+
                   <div className={`text-[10px] mt-3 opacity-40 font-bold ${m.type === "user" ? "text-right" : "text-left"}`}>
                     {m.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </div>
@@ -343,7 +380,45 @@ export default function ChatPage() {
 
       </main>
 
-      {/* Floating hints or badges could go here */}
+      {/* Property Details Modal */}
+      {selectedProperty && (
+        <PropertyModal
+          property={selectedProperty.property}
+          currentIndex={selectedProperty.index}
+          total={selectedProperty.total}
+          onClose={() => setSelectedProperty(null)}
+          onNext={
+            selectedProperty.index < selectedProperty.total - 1
+              ? () => {
+                  const msg = messages.find(m => m.id === selectedProperty.messageId);
+                  if (msg?.properties) {
+                    const nextIdx = selectedProperty.index + 1;
+                    setSelectedProperty({
+                      ...selectedProperty,
+                      index: nextIdx,
+                      property: msg.properties[nextIdx]
+                    });
+                  }
+                }
+              : undefined
+          }
+          onPrev={
+            selectedProperty.index > 0
+              ? () => {
+                  const msg = messages.find(m => m.id === selectedProperty.messageId);
+                  if (msg?.properties) {
+                    const prevIdx = selectedProperty.index - 1;
+                    setSelectedProperty({
+                      ...selectedProperty,
+                      index: prevIdx,
+                      property: msg.properties[prevIdx]
+                    });
+                  }
+                }
+              : undefined
+          }
+        />
+      )}
     </div>
   );
 }

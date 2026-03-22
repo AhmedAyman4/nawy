@@ -76,11 +76,15 @@ class ChatRequest(BaseModel):
     question: str
     session_id: str = "default"
 
+# ==========================================
+# CHANGE 1: Extended ChatResponse with optional properties field
+# ==========================================
 class ChatResponse(BaseModel):
     question: str
     answer: str
     session_id: str
     history_length: int
+    properties: Optional[List[Dict[str, Any]]] = None  # populated only for property search questions
 
 class CompareRequest(BaseModel):
     id1: str
@@ -316,6 +320,24 @@ def maybe_update_preferences(session_id: str, all_messages, llm, mongo_client: M
 
 
 # ==========================================
+# CHANGE 2: Helper — detect property search intent and return top 10 results
+# ==========================================
+def _is_property_search(question: str, llm) -> bool:
+    """
+    Returns True if the user's question is asking to find/search for a property.
+    """
+    _is_property_search_prompt = client.pull_prompt("is_property_search_prompt")
+
+    response = (_is_property_search_prompt | llm).invoke({"question": question})
+    raw = response.content.strip()
+    raw = re.sub(r"^```json\s*", "", raw, flags=re.IGNORECASE)
+    raw = re.sub(r"^```\s*", "", raw)
+    raw = re.sub(r"```$", "", raw)
+    parsed = json.loads(raw.strip())
+    return bool(parsed.get("is_property_search", False))
+
+
+# ==========================================
 # 5. API Endpoints
 # ==========================================
 @app.get("/")
@@ -546,6 +568,42 @@ async def chat_about_location(request: Request, payload: ChatRequest):
         )
 
         history_messages = mongo_history.messages[-HISTORY_MESSAGES_LIMIT:]
+
+        # -------------------------------------------------------
+        # CHANGE 3: Detect property search intent before RAG flow
+        # -------------------------------------------------------
+        if _is_property_search(payload.question, llm):
+            recommend_payload = QueryRequest(query=payload.question, top_k=150, page=1, size=150)
+            recommend_result = await get_recommendations(request, recommend_payload)
+            properties = recommend_result.get("data", [])
+
+            count = len(properties)
+            if count > 0:
+                answer = f"I found {count} properties matching your request. Here are the top results for you!"
+            else:
+                answer = "I couldn't find any properties matching your criteria. Try adjusting your filters."
+
+            # Still save to history and update preferences — same as normal flow
+            mongo_history.add_user_message(payload.question)
+            mongo_history.add_ai_message(answer)
+
+            maybe_update_preferences(
+                session_id=session_id,
+                all_messages=mongo_history.messages,
+                llm=llm,
+                mongo_client=request.app.state.mongo_client,
+            )
+
+            return {
+                "question": payload.question,
+                "answer": answer,
+                "session_id": session_id,
+                "history_length": len(mongo_history.messages) // 2,
+                "properties": properties,
+            }
+        # -------------------------------------------------------
+        # End of change — normal location RAG flow below is untouched
+        # -------------------------------------------------------
 
         if history_messages:
             rewrite_prompt = client.pull_prompt("chat_history_rewrite_prompt")
