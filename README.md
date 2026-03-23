@@ -10,7 +10,7 @@ The system combines data scraping, advanced preprocessing, vector-based semantic
 
 ## High Level Architecture
 
-![High Level Architecture](backend/assets/high-level-architecture-diagram.png)
+![High Level Architecture](backend/assets/high-level-architecture-diagram-adaptive.png)
 
 ---
 

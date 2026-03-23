@@ -176,6 +176,13 @@ async def lifespan(app: FastAPI):
         model="llama-3.1-8b-instant",
         api_key=groq_api_key,
         temperature=0,
+        max_tokens=3000
+    )
+
+    app.state.smart_llm = ChatGroq(          # <-- add this
+        model="llama-3.3-70b-versatile",
+        api_key=groq_api_key,
+        temperature=0,
         max_tokens=2000
     )
 
@@ -458,7 +465,7 @@ async def get_recommendations(request: Request, payload: QueryRequest):
 
         df = request.app.state.df
         vectorstore = request.app.state.vectorstore
-        llm = request.app.state.llm
+        llm = request.app.state.smart_llm
 
         debug_info["query"] = query
         debug_info["dataframe_total_rows"] = len(df)
@@ -492,8 +499,31 @@ async def get_recommendations(request: Request, payload: QueryRequest):
         if recommended_df.empty:
             return {"data": [], "total": 0, "page": page, "size": size, "total_pages": 0, "debug": {**debug_info, "reason": "ID join returned 0 rows"}}
 
-        columns_str = str(['m2', 'Beds', 'Baths', 'price_float'])
+        schema = {
+            "numeric_columns": ["m2", "Beds", "Baths", "price_float"],
+            "categorical_columns": {
+                "location": [
+                    "New Capital City", "6th settlement", "El Sheikh Zayed",
+                    "6th of October City", "Madinaty", "El Shorouk", "October Gardens",
+                    "New Cairo", "Mostakbal City", "South Investors", "Ras El Hekma",
+                    "New Heliopolis", "New Zayed", "Northern Expansion", "New Capital Gardens",
+                    "El Lotus", "Sidi Heneish", "Alexandria", "Al Alamein", "Hurghada",
+                    "El Choueifat", "Al Dabaa", "Ain Sokhna", "Golden Square", "South New Cairo",
+                    "Somabay", "Sidi Abdel Rahman", "El Gouna", "North Investors", "Maadi",
+                    "Heliopolis", "North Coast-Sahel", "Central Cairo", "Old Cairo",
+                    "New Sphinx", "Ghazala Bay", "Ras Sudr", "Sahl Hasheesh", "Makadi",
+                    "Mokattam", "Downtown Cairo"
+                ],
+                "property_type": [
+                    "Apartment", "Cabin", "Chalet", "Clinic", "Duplex", "Family House",
+                    "Administrative", "Pharmacy", "Building", "Loft", "Office", "Penthouse",
+                    "Retail", "Studio", "Townhouse", "Twinhouse", "Villa"
+                ]
+            }
+        }
+        columns_str = json.dumps(schema)
         recommend_prompt = client.pull_prompt("recommend_prompt")
+        
         chain = recommend_prompt | llm
         raw_code = chain.invoke({"columns": columns_str, "query": query}).content.strip()
         code = clean_llm_code(raw_code)
@@ -504,16 +534,22 @@ async def get_recommendations(request: Request, payload: QueryRequest):
         try:
             exec(code, {}, exec_locals)
             df_filtered = exec_locals.get("df_filtered")
-
-            if df_filtered is None:
-                debug_info["llm_filter_result"] = "df_filtered was None — falling back"
-                df_filtered = recommended_df
-            elif len(df_filtered) == 0:
-                debug_info["llm_filter_result"] = f"df_filtered was empty — falling back"
-                df_filtered = recommended_df
+        
+            if df_filtered is None or len(df_filtered) == 0:
+                # Fall back: run same filter on the full dataframe
+                debug_info["llm_filter_result"] = "vectorstore results empty — falling back to full CSV"
+                exec_locals_fallback = {"pd": pd, "recommended_df": df}  # <- swap in full df
+                exec(code, {}, exec_locals_fallback)
+                df_filtered = exec_locals_fallback.get("df_filtered")
+        
+                if df_filtered is None or len(df_filtered) == 0:
+                    debug_info["llm_filter_result"] += " — full CSV also empty, returning full CSV"
+                    df_filtered = df
+                else:
+                    debug_info["llm_filter_result"] += f" — full CSV returned {len(df_filtered)} rows"
             else:
                 debug_info["llm_filter_result"] = f"OK — {len(df_filtered)} rows after filter"
-
+        
         except Exception as exec_error:
             debug_info["llm_filter_result"] = f"exec() error: {str(exec_error)} — falling back"
             df_filtered = recommended_df
@@ -553,6 +589,7 @@ async def get_recommendations(request: Request, payload: QueryRequest):
 async def chat_about_location(request: Request, payload: ChatRequest):
     try:
         llm = request.app.state.llm
+        smart_llm = request.app.state.smart_llm
         vectorstore = request.app.state.locations_and_compounds_vectorstore
 
         if not payload.question.strip():
@@ -572,7 +609,7 @@ async def chat_about_location(request: Request, payload: ChatRequest):
         # -------------------------------------------------------
         # CHANGE 3: Detect property search intent before RAG flow
         # -------------------------------------------------------
-        if _is_property_search(payload.question, llm):
+        if _is_property_search(payload.question, smart_llm):
             recommend_payload = QueryRequest(query=payload.question, top_k=150, page=1, size=150)
             recommend_result = await get_recommendations(request, recommend_payload)
             properties = recommend_result.get("data", [])
@@ -590,7 +627,7 @@ async def chat_about_location(request: Request, payload: ChatRequest):
             maybe_update_preferences(
                 session_id=session_id,
                 all_messages=mongo_history.messages,
-                llm=llm,
+                llm=smart_llm,
                 mongo_client=request.app.state.mongo_client,
             )
 
@@ -631,7 +668,7 @@ async def chat_about_location(request: Request, payload: ChatRequest):
         maybe_update_preferences(
             session_id=session_id,
             all_messages=mongo_history.messages,
-            llm=llm,
+            llm=smart_llm,
             mongo_client=request.app.state.mongo_client
         )
 
