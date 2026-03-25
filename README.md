@@ -4,7 +4,9 @@ A comprehensive real-estate platform that leverages semantic search, AI-driven r
 
 ## Overview
 
-The **Nawy Property Recommender** is an end-to-end solution designed to transform how users search for real estate. Instead of relying solely on rigid filters, users can search using natural language (e.g., *"Looking for a luxury villa in New Cairo with a pool and at least 3 bedrooms under 15 million EGP"*).
+The **Nawy Property Recommender** is an end-to-end solution designed to transform how users search for real estate. Instead of relying solely on rigid filters, users can search using natural language (e.g., *"Looking for a luxury villa in New Cairo with a pool and at least 3 bedrooms under 15 million EGP"*). 
+
+Beyond searching for properties, the system features an intelligent **AI Consultant** that allows users to chat and ask deep-dive questions about locations, compounds, and community details. This includes up-to-date information on nearby **schools, hospitals, sports clubs, lifestyle facilities**, and all other key amenities listed on the official Nawy platform.
 
 The system combines data scraping, advanced preprocessing, vector-based semantic search, and Large Language Models (LLMs) to provide a "digital property consultant" experience.
 
