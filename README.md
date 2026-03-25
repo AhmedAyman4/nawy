@@ -10,7 +10,7 @@ The system combines data scraping, advanced preprocessing, vector-based semantic
 
 ## High Level Architecture
 
-![High Level Architecture](backend/assets/high-level-architecture-diagram-adaptive.png)
+![High Level Architecture](backend/assets/diagrams/architecture/high-level-architecture-diagram-adaptive.png)
 
 ---
 
@@ -44,7 +44,7 @@ nawy/
 
 **Natural Language Search Sequence Diagram**
 
-![Natural Language Search Sequence Diagram](backend/assets/natural-language-search-sequence-diagram.png)
+![Natural Language Search Sequence Diagram](backend/assets/diagrams/search/natural-language-search-sequence-diagram.png)
 
 ### 2. **AI Personal Consultant (RAG Chat)**
 - **Location Insights**: Chatbot that answers questions about specific areas/compounds using RAG (Retrieval-Augmented Generation).
@@ -52,11 +52,11 @@ nawy/
 
 **Chat Endpoint Sequence Diagram**
 
-![Chat Endpoint Sequence Diagram](backend/assets/chat-endpoint-sequence-diagram.png)
+![Chat Endpoint Sequence Diagram](backend/assets/diagrams/chat/chat-endpoint-sequence-diagram.png)
 
 **Compare Parallel RAG sequence diagram**
 
-![Compare Parallel RAG sequence diagram](backend/assets/Compare-Parallel-RAG-sequence-diagram.png)
+![Compare Parallel RAG sequence diagram](backend/assets/diagrams/compare/Compare-Parallel-RAG-sequence-diagram.png)
 
 ### 3. **Smart Price Prediction**
 - **XGBoost Engine**: Predicts property prices based on location, size, property type, and features.
@@ -64,7 +64,7 @@ nawy/
 
 **Price Prediction Sequence Diagram**
 
-![Price Prediction Sequence Diagram](backend/assets/price-prediction-sequence-diagram.png)
+![Price Prediction Sequence Diagram](backend/assets/diagrams/prediction/price-prediction-sequence-diagram.png)
 
 ### 4. **Modern Web UI**
 - **Responsive Design**: Optimized for mobile and desktop.
@@ -135,3 +135,9 @@ nawy/
 2. **Preprocessing**: `02-data-preprocessing` cleans text, handles missing values, and prepares numeric fields for ML.
 3. **Indexing**: `03-embedding-semantic-search` converts text descriptions into vector embeddings and stores them in ChromaDB.
 4. **Modeling**: Trains an XGBoost model on the cleaned dataset for price estimation.
+
+---
+
+## Roadmap and Future Improvements
+
+For a detailed look at the future of this project, including our transition to a multi-agent "Agentverse" architecture, please refer to the [Future Improvements Roadmap](backend/assets/future-improvements/FUTURE_IMPROVEMENTS.md).
