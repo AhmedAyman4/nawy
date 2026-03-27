@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { Scale, Loader2, Info, ArrowLeft, Home, Printer } from "lucide-react";
+import { Scale, Loader2, Info, ArrowLeft, Home, Printer, History as HistoryIcon } from "lucide-react";
 import { PropertyData } from "@/types/property";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -49,6 +49,16 @@ function CompareContent() {
         setProperty1(p1Data);
         setProperty2(p2Data);
 
+        // Check for cached comparison in session storage to persist same session
+        const cacheKey = `comparison_${id1}_${id2}`;
+        const cachedData = sessionStorage.getItem(cacheKey);
+        
+        if (cachedData) {
+          setComparison(cachedData);
+          setIsLoading(false);
+          return;
+        }
+
         const compRes = await fetch(`${API_BASE_URL}/compare`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -61,6 +71,27 @@ function CompareContent() {
 
         const compData = await compRes.json();
         setComparison(compData.comparison);
+        // Save to cache
+        sessionStorage.setItem(cacheKey, compData.comparison);
+
+        // Save to comparison history
+        const historyData = {
+          id1,
+          id2,
+          property1: p1Data,
+          property2: p2Data,
+          timestamp: new Date().toISOString()
+        };
+        
+        const existingHistory = JSON.parse(localStorage.getItem('comparison_history') || '[]');
+        const alreadyExists = existingHistory.find((item: any) => 
+          (item.id1 === id1 && item.id2 === id2) || (item.id1 === id2 && item.id2 === id1)
+        );
+        
+        if (!alreadyExists) {
+          const newHistory = [historyData, ...existingHistory].slice(0, 10); // Keep last 10
+          localStorage.setItem('comparison_history', JSON.stringify(newHistory));
+        }
       } catch (err: any) {
         console.error("Comparison error:", err);
         setError(err.message || "Could not generate comparison. Please try again later.");
@@ -156,6 +187,14 @@ function CompareContent() {
             className="px-6 py-3 bg-white text-[#1A365D] font-bold rounded-2xl border border-slate-200 hover:bg-slate-50 transition-all shadow-sm flex items-center gap-2"
           >
             New Comparison
+          </button>
+          
+          <button
+            onClick={() => router.push("/history")}
+            className="p-3 bg-[#5DBDB6]/10 text-[#5DBDB6] font-bold rounded-2xl border border-[#5DBDB6]/20 hover:bg-[#5DBDB6]/20 transition-all shadow-sm flex items-center gap-2 group"
+          >
+            <HistoryIcon className="w-5 h-5 group-hover:rotate-180 transition-transform duration-500" />
+            <span className="hidden sm:inline">History</span>
           </button>
         </div>
       </div>

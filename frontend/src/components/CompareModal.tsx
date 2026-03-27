@@ -23,6 +23,16 @@ export function CompareModal({
 
   useEffect(() => {
     const fetchComparison = async () => {
+      // Check session storage first to persist in the same session
+      const cacheKey = `comparison_${property1.id}_${property2.id}`;
+      const cachedData = sessionStorage.getItem(cacheKey);
+      
+      if (cachedData) {
+        setComparison(cachedData);
+        setIsLoading(false);
+        return;
+      }
+
       setIsLoading(true);
       setError(null);
       try {
@@ -43,6 +53,8 @@ export function CompareModal({
 
         const data = await response.json();
         setComparison(data.comparison);
+        // Cache the result
+        sessionStorage.setItem(cacheKey, data.comparison);
       } catch (err: any) {
         console.error("Comparison error:", err);
         setError("Could not generate comparison. Please try again later.");
