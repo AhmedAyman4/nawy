@@ -8,7 +8,7 @@ The **Nawy Property Recommender** is an end-to-end solution designed to transfor
 
 ## High Level Architecture
 
-<img src="backend/assets/diagrams/architecture/high-level-architecture-diagram-adaptive.png" alt="High Level Architecture" width="800" />
+![High Level Architecture](backend/assets/diagrams/architecture/high-level-architecture-diagram-adaptive.png)
 
 ---
 
