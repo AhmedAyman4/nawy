@@ -4,15 +4,11 @@ A comprehensive real-estate platform that leverages semantic search, AI-driven r
 
 ## Overview
 
-The **Nawy Property Recommender** is an end-to-end solution designed to transform how users search for real estate. Instead of relying solely on rigid filters, users can search using natural language (e.g., *"Looking for a luxury villa in New Cairo with a pool and at least 3 bedrooms under 15 million EGP"*). 
-
-Beyond searching for properties, the system features an intelligent **AI Consultant** that allows users to chat and ask deep-dive questions about locations, compounds, and community details. This includes up-to-date information on nearby **schools, hospitals, sports clubs, lifestyle facilities**, and all other key amenities listed on the official Nawy platform.
-
-The system combines data scraping, advanced preprocessing, vector-based semantic search, and Large Language Models (LLMs) to provide a "digital property consultant" experience.
+The **Nawy Property Recommender** is an end-to-end solution designed to transform how users search for real estate by replacing rigid filters with natural language queries (e.g., *"Looking for a luxury villa in New Cairo with a pool and at least 3 bedrooms under 15 million EGP"*). Beyond searching for properties, the system features an intelligent **AI Consultant** that allows users to chat and ask deep-dive questions about locations, compounds, and community details—including up-to-date information on nearby **schools, hospitals, sports clubs, and lifestyle facilities**—by combining data scraping, advanced preprocessing, vector-based semantic search, and Large Language Models (LLMs) to provide a comprehensive "digital property consultant" experience.
 
 ## High Level Architecture
 
-![High Level Architecture](backend/assets/diagrams/architecture/high-level-architecture-diagram-adaptive.png)
+<img src="backend/assets/diagrams/architecture/high-level-architecture-diagram-adaptive.png" alt="High Level Architecture" width="800" />
 
 ---
 
@@ -24,11 +20,20 @@ nawy/
 ├── 02-data-preprocessing/      # Data cleaning, feature engineering, and normalization
 ├── 03-embedding-semantic-search/# Vector DB (ChromaDB) & Price Prediction (XGBoost)
 ├── backend/                    # Modular FastAPI server
-│   ├── main.py                 # API Entry point
-│   ├── core/                   # Lifespan & initialization logic
+│   ├── main.py                 # API Entry point and router inclusion
+│   ├── core/                   # System configuration and lifecycle management
+│   │   ├── config.py           # Global settings, MongoDB URIs, and shared schemas
+│   │   └── lifespan.py         # App startup/shutdown logic (DBs, Models, Vectorstores)
 │   ├── routers/                # Feature-based API routes
-│   ├── schemas/                # Pydantic data models
-│   ├── utils/                  # Helper functions & dependencies
+│   │   ├── general.py          # Root and health-check endpoints
+│   │   ├── properties.py       # Property browsing, filtering, and recommendations
+│   │   ├── chat.py             # AI Chat, history management, and intent detection
+│   │   ├── compare.py          # Property comparison logic
+│   │   └── predict.py          # Price prediction model interface
+│   ├── schemas/                # Pydantic data validation models
+│   │   └── models.py           # All API request/response models
+│   ├── utils/                  # Helper functions and business logic
+│   │   └── helpers.py          # LLM code cleaning, user preference updates, etc.
 │   └── app.py                  # Legacy combined script (to be deprecated)
 ├── frontend/                   # Next.js 16 + Tailwind CSS 4 user interface
 ├── project-guide.md            # Strategic project goals and roadmap
@@ -46,7 +51,7 @@ nawy/
 
 **Natural Language Search Sequence Diagram**
 
-![Natural Language Search Sequence Diagram](backend/assets/diagrams/search/natural-language-search-sequence-diagram.png)
+<img src="backend/assets/diagrams/search/natural-language-search-sequence-diagram.png" alt="Natural Language Search Sequence Diagram" width="650" />
 
 ### 2. **AI Personal Consultant (RAG Chat)**
 - **Location Insights**: Chatbot that answers questions about specific areas/compounds using RAG (Retrieval-Augmented Generation).
@@ -54,11 +59,11 @@ nawy/
 
 **Chat Endpoint Sequence Diagram**
 
-![Chat Endpoint Sequence Diagram](backend/assets/diagrams/chat/chat-endpoint-sequence-diagram.png)
+<img src="backend/assets/diagrams/chat/chat-endpoint-sequence-diagram.png" alt="Chat Endpoint Sequence Diagram" width="650" />
 
 **Compare Parallel RAG sequence diagram**
 
-![Compare Parallel RAG sequence diagram](backend/assets/diagrams/compare/Compare-Parallel-RAG-sequence-diagram.png)
+<img src="backend/assets/diagrams/compare/Compare-Parallel-RAG-sequence-diagram.png" alt="Compare Parallel RAG sequence diagram" width="650" />
 
 ### 3. **Smart Price Prediction**
 - **XGBoost Engine**: Predicts property prices based on location, size, property type, and features.
@@ -66,7 +71,7 @@ nawy/
 
 **Price Prediction Sequence Diagram**
 
-![Price Prediction Sequence Diagram](backend/assets/diagrams/prediction/price-prediction-sequence-diagram.png)
+<img src="backend/assets/diagrams/prediction/price-prediction-sequence-diagram.png" alt="Price Prediction Sequence Diagram" width="650" />
 
 ### 4. **Modern Web UI**
 - **Responsive Design**: Optimized for mobile and desktop.
@@ -94,25 +99,25 @@ nawy/
 - Groq API Key (for LLM features)
 
 ### Backend Setup
-1. Navigate to the backend directory:
-   ```bash
-   cd backend
-   ```
+1. Ensure you are in the project root directory.
 2. Install dependencies:
    ```bash
-   pip install -r requirements.txt
+   pip install -r backend/requirements.txt
    ```
-3. Set your Groq API Key:
+3. Set your environment variables:
+   - **GROQ_API_KEY**: Required for LLM functionality (from Groq Cloud).
+   - **MONGO_URI**: Required for chat history and user preference storage.
    ```bash
    # Windows
-   $env:GROQ_API_KEY="your_key_here"
+   $env:GROQ_API_KEY="your_groq_key"
+   $env:MONGO_URI="your_mongodb_uri"
    # Linux/Mac
-   export GROQ_API_KEY=your_key_here
+   export GROQ_API_KEY=your_groq_key
+   export MONGO_URI=your_mongodb_uri
    ```
-4. Run the server:
+4. Run the modular server from the project root:
    ```bash
-   # Using the new modular structure
-   uvicorn main:app --reload
+   uvicorn backend.main:app --reload
    ```
 
 ### Frontend Setup
