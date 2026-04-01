@@ -51,3 +51,17 @@ Based on the architectural patterns above, here is how we will evolve the curren
 For a deeper dive into the world of agentic workflows and Agentverse concepts, refer to the following resources:
 
 *   **Watch**: [Build a Multi-Agent System with ADK, MCP, and Gemini](https://youtu.be/2ERrxG-Ii3I?si=3zQfAaqqIqUoA4rH) — A comprehensive guide on the concepts that inspired this roadmap.
+
+---
+
+## Appendix: Troubleshooting & Known Issues
+
+### Cluster0 Connection failure in MongoDB Cloud
+**Status:** Degraded
+
+**1. Check for Active Outages**
+There have been several recent documented incidents in early 2026 that may still be impacting your cluster:
+
+*   **Regional Impairment (Middle East):** Significant infrastructure issues were reported in the AWS `me-central-1` (UAE) and AWS `me-south-1` (Bahrain) regions throughout March 2026. If your `Cluster0` is hosted in these regions, MongoDB has recommended moving workloads to alternate regions (e.g., Europe or North America).
+
+![MongoDB AWS Outage](./06_MongoDB_AWS_Outage.png)
