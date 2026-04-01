@@ -62,11 +62,25 @@ async def lifespan(app: FastAPI):
         app.state.price_model = None
         app.state.price_encoder = None
 
+    # Initialize local fallback stores (always created, used when Mongo is unavailable)
+    app.state.local_chat_histories: dict[str, Any] = {}
+    app.state.local_preferences: dict[str, dict] = {}
+
     print("Initializing shared MongoDB client...")
-    app.state.mongo_client = MongoClient(MONGO_URI)
-    print("MongoDB client ready!")
+    try:
+        app.state.mongo_client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=3000)
+        # Force a connection check
+        app.state.mongo_client.admin.command("ping")
+        app.state.mongo_available = True
+        print("MongoDB client ready!")
+    except Exception as e:
+        print(f"WARNING: MongoDB unavailable at startup ({e}). Using local in-memory fallback.")
+        app.state.mongo_client = None
+        app.state.mongo_available = False
 
     print("🚀 API is ready!")
     yield
     print("Shutting down API...")
-    app.state.mongo_client.close()
+    if app.state.mongo_client:
+        app.state.mongo_client.close()
+

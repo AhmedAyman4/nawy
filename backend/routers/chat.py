@@ -1,14 +1,19 @@
 from fastapi import APIRouter, HTTPException, Request
-from langchain_mongodb.chat_message_histories import MongoDBChatMessageHistory
 from langchain_core.messages import HumanMessage
 from langchain_core.output_parsers import StrOutputParser
 from langsmith import Client
 
 from ..schemas.models import ChatRequest, ChatResponse, QueryRequest
-from ..utils.helpers import _is_property_search, maybe_update_preferences, _load_preference_doc
+from ..utils.helpers import (
+    _is_property_search, 
+    maybe_update_preferences_safe, 
+    safe_load_preference_doc,
+    get_history
+)
 from ..core.config import (
-    MONGO_URI, MONGO_DB_NAME, MONGO_COLLECTION_NAME, 
-    HISTORY_MESSAGES_LIMIT, CONFIG
+    MONGO_DB_NAME, 
+    HISTORY_MESSAGES_LIMIT, 
+    CONFIG
 )
 from .properties import get_recommendations
 
@@ -27,15 +32,12 @@ async def chat_about_location(request: Request, payload: ChatRequest):
 
         session_id = payload.session_id
 
-        mongo_history = MongoDBChatMessageHistory(
-            connection_string=MONGO_URI,
-            database_name=MONGO_DB_NAME,
-            collection_name=MONGO_COLLECTION_NAME,
-            session_id=session_id,
-        )
+        # Use safe history helper — falls back to in-memory if Mongo is unavailable
+        chat_history = get_history(session_id, request.app.state, CONFIG)
 
-        history_messages = mongo_history.messages[-HISTORY_MESSAGES_LIMIT:]
+        history_messages = chat_history.messages[-HISTORY_MESSAGES_LIMIT:]
 
+        # Detect property search intent before RAG flow
         if _is_property_search(payload.question, smart_llm):
             recommend_payload = QueryRequest(query=payload.question, top_k=150, page=1, size=150)
             recommend_result = await get_recommendations(request, recommend_payload)
@@ -44,14 +46,14 @@ async def chat_about_location(request: Request, payload: ChatRequest):
             count = len(properties)
             answer = f"I found {count} properties matching your request. Here are the top results for you!" if count > 0 else "I couldn't find any properties matching your criteria. Try adjusting your filters."
 
-            mongo_history.add_user_message(payload.question)
-            mongo_history.add_ai_message(answer)
+            chat_history.add_user_message(payload.question)
+            chat_history.add_ai_message(answer)
 
-            maybe_update_preferences(
+            maybe_update_preferences_safe(
                 session_id=session_id,
-                all_messages=mongo_history.messages,
+                all_messages=chat_history.messages,
                 llm=smart_llm,
-                mongo_client=request.app.state.mongo_client,
+                app_state=request.app.state,
                 config=CONFIG
             )
 
@@ -59,7 +61,7 @@ async def chat_about_location(request: Request, payload: ChatRequest):
                 "question": payload.question,
                 "answer": answer,
                 "session_id": session_id,
-                "history_length": len(mongo_history.messages) // 2,
+                "history_length": len(chat_history.messages) // 2,
                 "properties": properties,
             }
 
@@ -72,7 +74,7 @@ async def chat_about_location(request: Request, payload: ChatRequest):
         else:
             retriever_query = payload.question
 
-        retrieved_docs = vectorstore.as_retriever(search_kwargs={"k": 7}).invoke(retriever_query)
+        retrieved_docs = vectorstore.as_retriever(search_kwargs={"k": 10}).invoke(retriever_query)
         context = "\n\n".join(doc.page_content for doc in retrieved_docs)
         location_prompt = client.pull_prompt("property_location_prompt")
         response = (location_prompt | llm).invoke({
@@ -83,14 +85,14 @@ async def chat_about_location(request: Request, payload: ChatRequest):
 
         answer = response.content.strip()
 
-        mongo_history.add_user_message(payload.question)
-        mongo_history.add_ai_message(answer)
+        chat_history.add_user_message(payload.question)
+        chat_history.add_ai_message(answer)
 
-        maybe_update_preferences(
+        maybe_update_preferences_safe(
             session_id=session_id,
-            all_messages=mongo_history.messages,
+            all_messages=chat_history.messages,
             llm=smart_llm,
-            mongo_client=request.app.state.mongo_client,
+            app_state=request.app.state,
             config=CONFIG
         )
 
@@ -98,7 +100,7 @@ async def chat_about_location(request: Request, payload: ChatRequest):
             "question": payload.question,
             "answer": answer,
             "session_id": session_id,
-            "history_length": len(mongo_history.messages) // 2
+            "history_length": len(chat_history.messages) // 2
         }
 
     except HTTPException:
@@ -108,36 +110,24 @@ async def chat_about_location(request: Request, payload: ChatRequest):
 
 @router.get("/chat/{session_id}/preferences")
 async def get_user_preferences(session_id: str, request: Request):
-    doc = _load_preference_doc(
+    doc = safe_load_preference_doc(
         session_id, 
-        request.app.state.mongo_client, 
-        MONGO_DB_NAME, 
-        CONFIG["MONGO_PREFERENCES_COLLECTION"], 
-        CONFIG["USER_PREFERENCE_SCHEMA"]
+        request.app.state, 
+        CONFIG
     )
     doc.pop("_id", None)
     return doc
 
 @router.delete("/chat/{session_id}")
-async def clear_chat_history(session_id: str):
-    mongo_history = MongoDBChatMessageHistory(
-        connection_string=MONGO_URI,
-        database_name=MONGO_DB_NAME,
-        collection_name=MONGO_COLLECTION_NAME,
-        session_id=session_id,
-    )
-    mongo_history.clear()
+async def clear_chat_history(session_id: str, request: Request):
+    chat_history = get_history(session_id, request.app.state, CONFIG)
+    chat_history.clear()
     return {"message": f"History cleared for session '{session_id}'"}
 
 @router.get("/chat/{session_id}/history")
-async def get_chat_history(session_id: str):
-    mongo_history = MongoDBChatMessageHistory(
-        connection_string=MONGO_URI,
-        database_name=MONGO_DB_NAME,
-        collection_name=MONGO_COLLECTION_NAME,
-        session_id=session_id,
-    )
-    history = mongo_history.messages
+async def get_chat_history(session_id: str, request: Request):
+    chat_history = get_history(session_id, request.app.state, CONFIG)
+    history = chat_history.messages
     formatted = [
         {"role": "human" if isinstance(msg, HumanMessage) else "assistant", "content": msg.content}
         for msg in history
@@ -147,3 +137,4 @@ async def get_chat_history(session_id: str):
         "history": formatted,
         "turns": len(formatted) // 2
     }
+

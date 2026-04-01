@@ -128,15 +128,24 @@ async def get_recommendations(request: Request, payload: QueryRequest):
         debug_info["vectorstore_hits"] = len(recommendations)
 
         recommendation_ids = []
+        raw_ids_sample = []
         for doc in recommendations:
             raw_id = doc.metadata.get('id')
             if raw_id is not None:
-                recommendation_ids.append(str(raw_id))
+                raw_ids_sample.append(raw_id)
+                normalized_id = str(raw_id)
+                recommendation_ids.append(normalized_id)
+
+        debug_info["extracted_ids_count"] = len(recommendation_ids)
+        debug_info["sample_raw_ids"] = raw_ids_sample[:5]
+        debug_info["sample_normalized_ids"] = recommendation_ids[:5]
+        debug_info["sample_df_ids"] = df['id'].head(5).tolist()
 
         if not recommendation_ids:
-            return {"data": [], "total": 0, "page": page, "size": size, "total_pages": 0, "debug": {**debug_info, "reason": "No IDs extracted"}}
+            return {"data": [], "total": 0, "page": page, "size": size, "total_pages": 0, "debug": {**debug_info, "reason": "No IDs extracted from vectorstore"}}
 
         recommended_df = df[df['id'].isin(recommendation_ids)].copy()
+        debug_info["df_matches_after_id_join"] = len(recommended_df)
 
         if recommended_df.empty:
             return {"data": [], "total": 0, "page": page, "size": size, "total_pages": 0, "debug": {**debug_info, "reason": "ID join returned 0 rows"}}
@@ -144,8 +153,23 @@ async def get_recommendations(request: Request, payload: QueryRequest):
         schema = {
             "numeric_columns": ["m2", "Beds", "Baths", "price_float"],
             "categorical_columns": {
-                "location": ["New Capital City", "6th settlement", "El Sheikh Zayed", "6th of October City", "Madinaty", "El Shorouk", "October Gardens", "New Cairo", "Mostakbal City", "South Investors", "Ras El Hekma", "New Heliopolis", "New Zayed", "Northern Expansion", "New Capital Gardens", "El Lotus", "Sidi Heneish", "Alexandria", "Al Alamein", "Hurghada", "El Choueifat", "Al Dabaa", "Ain Sokhna", "Golden Square", "South New Cairo", "Somabay", "Sidi Abdel Rahman", "El Gouna", "North Investors", "Maadi", "Heliopolis", "North Coast-Sahel", "Central Cairo", "Old Cairo", "New Sphinx", "Ghazala Bay", "Ras Sudr", "Sahl Hasheesh", "Makadi", "Mokattam", "Downtown Cairo"],
-                "property_type": ["Apartment", "Cabin", "Chalet", "Clinic", "Duplex", "Family House", "Administrative", "Pharmacy", "Building", "Loft", "Office", "Penthouse", "Retail", "Studio", "Townhouse", "Twinhouse", "Villa"]
+                "location": [
+                    "New Capital City", "6th settlement", "El Sheikh Zayed",
+                    "6th of October City", "Madinaty", "El Shorouk", "October Gardens",
+                    "New Cairo", "Mostakbal City", "South Investors", "Ras El Hekma",
+                    "New Heliopolis", "New Zayed", "Northern Expansion", "New Capital Gardens",
+                    "El Lotus", "Sidi Heneish", "Alexandria", "Al Alamein", "Hurghada",
+                    "El Choueifat", "Al Dabaa", "Ain Sokhna", "Golden Square", "South New Cairo",
+                    "Somabay", "Sidi Abdel Rahman", "El Gouna", "North Investors", "Maadi",
+                    "Heliopolis", "North Coast-Sahel", "Central Cairo", "Old Cairo",
+                    "New Sphinx", "Ghazala Bay", "Ras Sudr", "Sahl Hasheesh", "Makadi",
+                    "Mokattam", "Downtown Cairo"
+                ],
+                "property_type": [
+                    "Apartment", "Cabin", "Chalet", "Clinic", "Duplex", "Family House",
+                    "Administrative", "Pharmacy", "Building", "Loft", "Office", "Penthouse",
+                    "Retail", "Studio", "Townhouse", "Twinhouse", "Villa"
+                ]
             }
         }
         columns_str = json.dumps(schema)
@@ -154,19 +178,31 @@ async def get_recommendations(request: Request, payload: QueryRequest):
         chain = recommend_prompt | llm
         raw_code = chain.invoke({"columns": columns_str, "query": query}).content.strip()
         code = clean_llm_code(raw_code)
-        
+        debug_info["llm_generated_code"] = code
+
         exec_locals = {"pd": pd, "recommended_df": recommended_df}
+
         try:
             exec(code, {}, exec_locals)
             df_filtered = exec_locals.get("df_filtered")
         
             if df_filtered is None or len(df_filtered) == 0:
-                exec_locals_fallback = {"pd": pd, "recommended_df": df}
+                # Fall back: run same filter on the full dataframe
+                debug_info["llm_filter_result"] = "vectorstore results empty — falling back to full CSV"
+                exec_locals_fallback = {"pd": pd, "recommended_df": df}  # <- swap in full df
                 exec(code, {}, exec_locals_fallback)
                 df_filtered = exec_locals_fallback.get("df_filtered")
+        
                 if df_filtered is None or len(df_filtered) == 0:
+                    debug_info["llm_filter_result"] += " — full CSV also empty, returning full CSV"
                     df_filtered = df
-        except Exception:
+                else:
+                    debug_info["llm_filter_result"] += f" — full CSV returned {len(df_filtered)} rows"
+            else:
+                debug_info["llm_filter_result"] = f"OK — {len(df_filtered)} rows after filter"
+        
+        except Exception as exec_error:
+            debug_info["llm_filter_result"] = f"exec() error: {str(exec_error)} — falling back"
             df_filtered = recommended_df
 
         total_records = len(df_filtered)
@@ -192,5 +228,7 @@ async def get_recommendations(request: Request, payload: QueryRequest):
             "total_pages": total_pages,
             "debug": debug_info
         }
+
     except Exception as e:
         raise HTTPException(status_code=500, detail={"error": str(e), "debug": debug_info})
+

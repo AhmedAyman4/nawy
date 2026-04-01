@@ -15,6 +15,8 @@ from langchain_chroma import Chroma
 from langchain_groq import ChatGroq
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.messages import HumanMessage, AIMessage
+# from langchain_core.messages import ChatMessageHistory
+from langchain_community.chat_message_histories import ChatMessageHistory
 from langchain_mongodb.chat_message_histories import MongoDBChatMessageHistory
 
 from langchain_core.runnables import RunnablePassthrough, RunnableParallel, RunnableLambda
@@ -196,14 +198,27 @@ async def lifespan(app: FastAPI):
         app.state.price_model = None
         app.state.price_encoder = None
 
+    # Initialize local fallback stores (always created, used when Mongo is unavailable)
+    app.state.local_chat_histories: dict[str, ChatMessageHistory] = {}
+    app.state.local_preferences: dict[str, dict] = {}
+
     print("Initializing shared MongoDB client...")
-    app.state.mongo_client = MongoClient(MONGO_URI)
-    print("MongoDB client ready!")
+    try:
+        app.state.mongo_client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=3000)
+        # Force a connection check
+        app.state.mongo_client.admin.command("ping")
+        app.state.mongo_available = True
+        print("MongoDB client ready!")
+    except Exception as e:
+        print(f"WARNING: MongoDB unavailable at startup ({e}). Using local in-memory fallback.")
+        app.state.mongo_client = None
+        app.state.mongo_available = False
 
     print("🚀 API is ready!")
     yield
     print("Shutting down API...")
-    app.state.mongo_client.close()
+    if app.state.mongo_client:
+        app.state.mongo_client.close()
 
 # ==========================================
 # 4. Initialize FastAPI App
@@ -327,21 +342,131 @@ def maybe_update_preferences(session_id: str, all_messages, llm, mongo_client: M
 
 
 # ==========================================
+# MongoDB Fallback Helpers
+# ==========================================
+def _get_history(session_id: str, app_state) -> object:
+    """
+    Returns a chat history object for the given session.
+    Tries MongoDBChatMessageHistory first. If Mongo is unavailable (or fails),
+    flips app_state.mongo_available to False permanently and returns an
+    in-memory ChatMessageHistory stored in app_state.local_chat_histories.
+    """
+    if app_state.mongo_available:
+        try:
+            history = MongoDBChatMessageHistory(
+                connection_string=MONGO_URI,
+                database_name=MONGO_DB_NAME,
+                collection_name=MONGO_COLLECTION_NAME,
+                session_id=session_id,
+            )
+            # Trigger an actual read to catch connection errors early
+            _ = history.messages
+            return history
+        except Exception as e:
+            print(f"[mongo] Connection failed, switching to local fallback permanently: {e}")
+            app_state.mongo_available = False
+
+    # Local in-memory fallback
+    if session_id not in app_state.local_chat_histories:
+        app_state.local_chat_histories[session_id] = ChatMessageHistory()
+    return app_state.local_chat_histories[session_id]
+
+
+def _safe_load_preference_doc(session_id: str, app_state) -> dict:
+    """
+    Loads user preference doc. Falls back to app_state.local_preferences on Mongo error.
+    """
+    if app_state.mongo_available and app_state.mongo_client is not None:
+        try:
+            return _load_preference_doc(session_id, app_state.mongo_client)
+        except Exception as e:
+            print(f"[mongo] Failed to load preferences, switching to local fallback: {e}")
+            app_state.mongo_available = False
+
+    if session_id not in app_state.local_preferences:
+        doc = dict(USER_PREFERENCE_SCHEMA)
+        doc["user_id"] = session_id
+        app_state.local_preferences[session_id] = doc
+    return app_state.local_preferences[session_id]
+
+
+def _safe_save_preference_doc(doc: dict, app_state) -> None:
+    """
+    Saves user preference doc. Falls back to app_state.local_preferences on Mongo error.
+    """
+    if app_state.mongo_available and app_state.mongo_client is not None:
+        try:
+            _save_preference_doc(doc, app_state.mongo_client)
+            return
+        except Exception as e:
+            print(f"[mongo] Failed to save preferences, switching to local fallback: {e}")
+            app_state.mongo_available = False
+
+    app_state.local_preferences[doc["user_id"]] = doc
+
+
+def maybe_update_preferences_safe(session_id: str, all_messages, llm, app_state) -> None:
+    """
+    Drop-in replacement for maybe_update_preferences that uses the safe load/save helpers.
+    """
+    try:
+        doc = _safe_load_preference_doc(session_id, app_state)
+        doc["turn_counter"] = doc.get("turn_counter", 0) + 1
+
+        if doc["turn_counter"] % PREFERENCE_EXTRACTION_EVERY_N_TURNS == 0:
+            already_processed = doc.get("processed_user_message_count", 0)
+
+            all_user_texts = [
+                msg.content
+                for msg in all_messages
+                if isinstance(msg, HumanMessage)
+            ]
+
+            new_user_texts = all_user_texts[already_processed:]
+
+            if new_user_texts:
+                extracted = _extract_preferences_from_history(new_user_texts, doc, llm)
+
+                if extracted:
+                    for field in [
+                        "preferred_locations", "property_specs",
+                        "budget_range", "lifestyle_preferences",
+                        "investment_intent", "summary_of_intent"
+                    ]:
+                        if field in extracted:
+                            doc[field] = extracted[field]
+
+                doc["processed_user_message_count"] = len(all_user_texts)
+
+            doc["last_updated"] = datetime.now(timezone.utc).isoformat()
+
+        _safe_save_preference_doc(doc, app_state)
+
+    except Exception as e:
+        print(f"[preferences] Non-fatal error for session {session_id}: {e}")
+
+
+# ==========================================
 # CHANGE 2: Helper — detect property search intent and return top 10 results
 # ==========================================
 def _is_property_search(question: str, llm) -> bool:
     """
     Returns True if the user's question is asking to find/search for a property.
     """
-    _is_property_search_prompt = client.pull_prompt("is_property_search_prompt")
-
-    response = (_is_property_search_prompt | llm).invoke({"question": question})
-    raw = response.content.strip()
-    raw = re.sub(r"^```json\s*", "", raw, flags=re.IGNORECASE)
-    raw = re.sub(r"^```\s*", "", raw)
-    raw = re.sub(r"```$", "", raw)
-    parsed = json.loads(raw.strip())
-    return bool(parsed.get("is_property_search", False))
+    try:
+        _is_property_search_prompt = client.pull_prompt("is_property_search_prompt")
+        if _is_property_search_prompt is None:
+            return False  # safe fallback
+        response = (_is_property_search_prompt | llm).invoke({"question": question})
+        raw = response.content.strip()
+        raw = re.sub(r"^```json\s*", "", raw, flags=re.IGNORECASE)
+        raw = re.sub(r"^```\s*", "", raw)
+        raw = re.sub(r"```$", "", raw)
+        parsed = json.loads(raw.strip())
+        return bool(parsed.get("is_property_search", False))
+    except Exception as e:
+        print(f"[is_property_search] Failed, defaulting to False: {e}")
+        return False  # never crash the chat endpoint over this
 
 
 # ==========================================
@@ -597,14 +722,10 @@ async def chat_about_location(request: Request, payload: ChatRequest):
 
         session_id = payload.session_id
 
-        mongo_history = MongoDBChatMessageHistory(
-            connection_string=MONGO_URI,
-            database_name=MONGO_DB_NAME,
-            collection_name=MONGO_COLLECTION_NAME,
-            session_id=session_id,
-        )
+        # Use safe history helper — falls back to in-memory if Mongo is unavailable
+        chat_history = _get_history(session_id, request.app.state)
 
-        history_messages = mongo_history.messages[-HISTORY_MESSAGES_LIMIT:]
+        history_messages = chat_history.messages[-HISTORY_MESSAGES_LIMIT:]
 
         # -------------------------------------------------------
         # CHANGE 3: Detect property search intent before RAG flow
@@ -621,21 +742,21 @@ async def chat_about_location(request: Request, payload: ChatRequest):
                 answer = "I couldn't find any properties matching your criteria. Try adjusting your filters."
 
             # Still save to history and update preferences — same as normal flow
-            mongo_history.add_user_message(payload.question)
-            mongo_history.add_ai_message(answer)
+            chat_history.add_user_message(payload.question)
+            chat_history.add_ai_message(answer)
 
-            maybe_update_preferences(
+            maybe_update_preferences_safe(
                 session_id=session_id,
-                all_messages=mongo_history.messages,
+                all_messages=chat_history.messages,
                 llm=smart_llm,
-                mongo_client=request.app.state.mongo_client,
+                app_state=request.app.state,
             )
 
             return {
                 "question": payload.question,
                 "answer": answer,
                 "session_id": session_id,
-                "history_length": len(mongo_history.messages) // 2,
+                "history_length": len(chat_history.messages) // 2,
                 "properties": properties,
             }
         # -------------------------------------------------------
@@ -651,7 +772,7 @@ async def chat_about_location(request: Request, payload: ChatRequest):
         else:
             retriever_query = payload.question
 
-        retrieved_docs = vectorstore.as_retriever(search_kwargs={"k": 7}).invoke(retriever_query)
+        retrieved_docs = vectorstore.as_retriever(search_kwargs={"k": 10}).invoke(retriever_query)
         context = "\n\n".join(doc.page_content for doc in retrieved_docs)
         location_prompt = client.pull_prompt("property_location_prompt")
         response = (location_prompt | llm).invoke({
@@ -662,21 +783,21 @@ async def chat_about_location(request: Request, payload: ChatRequest):
 
         answer = response.content.strip()
 
-        mongo_history.add_user_message(payload.question)
-        mongo_history.add_ai_message(answer)
+        chat_history.add_user_message(payload.question)
+        chat_history.add_ai_message(answer)
 
-        maybe_update_preferences(
+        maybe_update_preferences_safe(
             session_id=session_id,
-            all_messages=mongo_history.messages,
+            all_messages=chat_history.messages,
             llm=smart_llm,
-            mongo_client=request.app.state.mongo_client
+            app_state=request.app.state,
         )
 
         return {
             "question": payload.question,
             "answer": answer,
             "session_id": session_id,
-            "history_length": len(mongo_history.messages) // 2
+            "history_length": len(chat_history.messages) // 2
         }
 
     except HTTPException:
@@ -687,40 +808,32 @@ async def chat_about_location(request: Request, payload: ChatRequest):
 
 @app.get("/chat/{session_id}/preferences")
 async def get_user_preferences(session_id: str, request: Request):
-    doc = _load_preference_doc(session_id, request.app.state.mongo_client)
+    doc = _safe_load_preference_doc(session_id, request.app.state)
     doc.pop("_id", None)
     return doc
 
 
 @app.delete("/chat/{session_id}")
-async def clear_chat_history(session_id: str):
-    mongo_history = MongoDBChatMessageHistory(
-        connection_string=MONGO_URI,
-        database_name=MONGO_DB_NAME,
-        collection_name=MONGO_COLLECTION_NAME,
-        session_id=session_id,
-    )
-    mongo_history.clear()
+async def clear_chat_history(session_id: str, request: Request):
+    history = _get_history(session_id, request.app.state)
+    history.clear()
+    # Also clear local fallback if present
+    request.app.state.local_chat_histories.pop(session_id, None)
     return {"message": f"History cleared for session '{session_id}'"}
 
 
 @app.get("/chat/{session_id}/history")
-async def get_chat_history(session_id: str):
-    mongo_history = MongoDBChatMessageHistory(
-        connection_string=MONGO_URI,
-        database_name=MONGO_DB_NAME,
-        collection_name=MONGO_COLLECTION_NAME,
-        session_id=session_id,
-    )
-    history = mongo_history.messages
+async def get_chat_history(session_id: str, request: Request):
+    history = _get_history(session_id, request.app.state)
     formatted = [
         {"role": "human" if isinstance(msg, HumanMessage) else "assistant", "content": msg.content}
-        for msg in history
+        for msg in history.messages
     ]
     return {
         "session_id": session_id,
         "history": formatted,
-        "turns": len(formatted) // 2
+        "turns": len(formatted) // 2,
+        "storage": "mongodb" if request.app.state.mongo_available else "local",
     }
 
 

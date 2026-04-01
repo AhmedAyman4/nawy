@@ -65,3 +65,11 @@ There have been several recent documented incidents in early 2026 that may still
 *   **Regional Impairment (Middle East):** Significant infrastructure issues were reported in the AWS `me-central-1` (UAE) and AWS `me-south-1` (Bahrain) regions throughout March 2026. If your `Cluster0` is hosted in these regions, MongoDB has recommended moving workloads to alternate regions (e.g., Europe or North America).
 
 ![MongoDB AWS Outage](./06_MongoDB_AWS_Outage.png)
+
+**2. Implemented Fix: Local Fallback Mechanism**
+To ensure high availability and prevent the application from crashing during MongoDB outages (like the one shown above), we have implemented a robust local fallback system:
+
+*   **In-Memory Session Storage:** If connection to MongoDB fails at startup or during a session, the API automatically switches to an in-memory `ChatMessageHistory` storage (`app.state.local_chat_histories`).
+*   **Volatile Preference Fallback:** User preference extraction persists even without a database by falling back to local dictionary storage (`app.state.local_preferences`).
+*   **Automatic Degraded Mode:** The system detects connection timeouts (3000ms threshold) and permanently switches the active session to "Local Mode" for that lifecycle to maintain a smooth user experience.
+*   **Safe Helpers:** New utility functions (`_get_history`, `_safe_load_preference_doc`, `_safe_save_preference_doc`) wrap all database operations to handle exceptions gracefully.
