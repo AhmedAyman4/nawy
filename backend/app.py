@@ -214,6 +214,16 @@ async def lifespan(app: FastAPI):
         app.state.mongo_client = None
         app.state.mongo_available = False
 
+    print("Pulling LangSmith prompts...")
+    app.state.prompts = {
+        "rewrite": client.pull_prompt("chat_history_rewrite_prompt"),
+        "location": client.pull_prompt("property_location_prompt"),
+        "is_property": client.pull_prompt("is_property_search_prompt"),
+        "recommend": client.pull_prompt("recommend_prompt"),
+        "extract": client.pull_prompt("extract_preferences_from_history_prompt"),
+        "compare": client.pull_prompt("compare_multi_context_prompt")
+    }
+
     print("🚀 API is ready!")
     yield
     print("Shutting down API...")
@@ -274,7 +284,7 @@ def _save_preference_doc(doc: dict, mongo_client: MongoClient) -> None:
     )
 
 
-def _extract_preferences_from_history(new_user_messages: list[str], existing_profile: dict, llm) -> dict:
+def _extract_preferences_from_history(new_user_messages: list[str], existing_profile: dict, llm, extraction_prompt=None) -> dict:
     if not new_user_messages:
         return {}
 
@@ -285,7 +295,8 @@ def _extract_preferences_from_history(new_user_messages: list[str], existing_pro
         indent=2
     )
 
-    extraction_prompt = client.pull_prompt("extract_preferences_from_history_prompt")
+    if extraction_prompt is None:
+        extraction_prompt = client.pull_prompt("extract_preferences_from_history_prompt")
     preference_chain = extraction_prompt | llm
     response = preference_chain.invoke({
         "current_profile_text": current_profile_text,
@@ -425,7 +436,8 @@ def maybe_update_preferences_safe(session_id: str, all_messages, llm, app_state)
             new_user_texts = all_user_texts[already_processed:]
 
             if new_user_texts:
-                extracted = _extract_preferences_from_history(new_user_texts, doc, llm)
+                extraction_prompt = app_state.prompts["extract"]
+                extracted = _extract_preferences_from_history(new_user_texts, doc, llm, extraction_prompt)
 
                 if extracted:
                     for field in [
@@ -449,15 +461,16 @@ def maybe_update_preferences_safe(session_id: str, all_messages, llm, app_state)
 # ==========================================
 # CHANGE 2: Helper — detect property search intent and return top 10 results
 # ==========================================
-def _is_property_search(question: str, llm) -> bool:
+def _is_property_search(question: str, llm, is_property_search_prompt=None) -> bool:
     """
     Returns True if the user's question is asking to find/search for a property.
     """
     try:
-        _is_property_search_prompt = client.pull_prompt("is_property_search_prompt")
-        if _is_property_search_prompt is None:
+        if is_property_search_prompt is None:
+            is_property_search_prompt = client.pull_prompt("is_property_search_prompt")
+        if is_property_search_prompt is None:
             return False  # safe fallback
-        response = (_is_property_search_prompt | llm).invoke({"question": question})
+        response = (is_property_search_prompt | llm).invoke({"question": question})
         raw = response.content.strip()
         raw = re.sub(r"^```json\s*", "", raw, flags=re.IGNORECASE)
         raw = re.sub(r"^```\s*", "", raw)
@@ -647,7 +660,7 @@ async def get_recommendations(request: Request, payload: QueryRequest):
             }
         }
         columns_str = json.dumps(schema)
-        recommend_prompt = client.pull_prompt("recommend_prompt")
+        recommend_prompt = request.app.state.prompts["recommend"]
         
         chain = recommend_prompt | llm
         raw_code = chain.invoke({"columns": columns_str, "query": query}).content.strip()
@@ -730,7 +743,7 @@ async def chat_about_location(request: Request, payload: ChatRequest):
         # -------------------------------------------------------
         # CHANGE 3: Detect property search intent before RAG flow
         # -------------------------------------------------------
-        if _is_property_search(payload.question, smart_llm):
+        if _is_property_search(payload.question, smart_llm, request.app.state.prompts["is_property"]):
             recommend_payload = QueryRequest(query=payload.question, top_k=150, page=1, size=150)
             recommend_result = await get_recommendations(request, recommend_payload)
             properties = recommend_result.get("data", [])
@@ -742,8 +755,11 @@ async def chat_about_location(request: Request, payload: ChatRequest):
                 answer = "I couldn't find any properties matching your criteria. Try adjusting your filters."
 
             # Still save to history and update preferences — same as normal flow
-            chat_history.add_user_message(payload.question)
-            chat_history.add_ai_message(answer)
+            try:
+                chat_history.add_user_message(payload.question)
+                chat_history.add_ai_message(answer)
+            except Exception as mongo_err:
+                print(f"Failed to save to Mongo history: {mongo_err}")
 
             maybe_update_preferences_safe(
                 session_id=session_id,
@@ -764,7 +780,7 @@ async def chat_about_location(request: Request, payload: ChatRequest):
         # -------------------------------------------------------
 
         if history_messages:
-            rewrite_prompt = client.pull_prompt("chat_history_rewrite_prompt")
+            rewrite_prompt = request.app.state.prompts["rewrite"]
             retriever_query = (rewrite_prompt | llm | StrOutputParser()).invoke({
                 "chat_history": history_messages,
                 "question": payload.question
@@ -774,7 +790,7 @@ async def chat_about_location(request: Request, payload: ChatRequest):
 
         retrieved_docs = vectorstore.as_retriever(search_kwargs={"k": 10}).invoke(retriever_query)
         context = "\n\n".join(doc.page_content for doc in retrieved_docs)
-        location_prompt = client.pull_prompt("property_location_prompt")
+        location_prompt = request.app.state.prompts["location"]
         response = (location_prompt | llm).invoke({
             "context": context,
             "chat_history": history_messages,
@@ -783,8 +799,11 @@ async def chat_about_location(request: Request, payload: ChatRequest):
 
         answer = response.content.strip()
 
-        chat_history.add_user_message(payload.question)
-        chat_history.add_ai_message(answer)
+        try:
+            chat_history.add_user_message(payload.question)
+            chat_history.add_ai_message(answer)
+        except Exception as mongo_err:
+            print(f"Failed to save to Mongo history: {mongo_err}")
 
         maybe_update_preferences_safe(
             session_id=session_id,
@@ -803,6 +822,7 @@ async def chat_about_location(request: Request, payload: ChatRequest):
     except HTTPException:
         raise
     except Exception as e:
+        print(f"CHAT ENDPOINT ERROR: {repr(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -880,7 +900,7 @@ async def compare_properties(request: Request, payload: CompareRequest):
         def format_docs(docs):
             return "\n\n".join(doc.page_content for doc in docs)
 
-        multi_context_prompt = client.pull_prompt("compare_multi_context_prompt")
+        multi_context_prompt = request.app.state.prompts["compare"]
 
         multi_context_chain = (
             {
