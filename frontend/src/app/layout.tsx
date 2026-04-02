@@ -1,9 +1,12 @@
 import type { Metadata } from "next";
-import { NTR } from "next/font/google";
+import { NTR, Geist } from "next/font/google";
 import "./globals.css";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { FavoritesProvider } from "@/context/FavoritesContext";
+import { cn } from "@/lib/utils";
+
+const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
 const ntrFont = NTR({
   weight: "400",
@@ -25,7 +28,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" className={cn("font-sans", geist.variable)}>
       <body
         className={`${ntrFont.variable} font-sans antialiased`}
       >

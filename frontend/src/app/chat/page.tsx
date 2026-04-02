@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
-import { Send, Loader2, MapPin, Trash2, ArrowLeft, MessageSquare, Info, Sparkles } from "lucide-react";
+import { Send, Loader2, MapPin, Trash2, ArrowLeft, MessageSquare, Info, Sparkles, User, Tag, Home, DollarSign, Activity, FileText, X } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import ReactMarkdown from "react-markdown";
@@ -17,6 +17,24 @@ interface Message {
   text: string;
   timestamp: Date;
   properties?: PropertyData[];
+}
+
+interface UserPreferences {
+  preferred_locations: string[];
+  property_specs: {
+    types: string[];
+    beds: number | null;
+    baths: number | null;
+    m2: number | null;
+  };
+  budget_range: {
+    min: number | null;
+    max: number | null;
+  };
+  lifestyle_preferences: string[];
+  investment_intent: string | null;
+  summary_of_intent: string;
+  last_updated: string | null;
 }
 
 
@@ -63,6 +81,9 @@ export default function ChatPage() {
     total: number;
     messageId: string;
   } | null>(null);
+  const [preferences, setPreferences] = useState<UserPreferences | null>(null);
+  const [isPreferencesOpen, setIsPreferencesOpen] = useState(false);
+  const [isFetchingPrefs, setIsFetchingPrefs] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Fetch history when page loads
@@ -175,9 +196,27 @@ export default function ChatPage() {
             timestamp: new Date(),
           },
         ]);
+        setPreferences(null);
       } catch (err) {
         console.error("Failed to clear chat history:", err);
       }
+    }
+  };
+
+  const fetchPreferences = async () => {
+    if (!sessionId) return;
+    setIsFetchingPrefs(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/chat/${sessionId}/preferences`);
+      if (response.ok) {
+        const data = await response.json();
+        setPreferences(data);
+        setIsPreferencesOpen(true);
+      }
+    } catch (err) {
+      console.error("Failed to fetch preferences:", err);
+    } finally {
+      setIsFetchingPrefs(false);
     }
   };
 
@@ -347,6 +386,16 @@ export default function ChatPage() {
               >
                 <Trash2 className="w-4 h-4 sm:w-5 sm:h-5" />
               </button>
+
+              <button 
+                type="button"
+                onClick={fetchPreferences}
+                disabled={isFetchingPrefs}
+                className="p-2 sm:p-2.5 text-slate-300 hover:text-[#5DBDB6] hover:bg-[#5DBDB6]/10 rounded-xl transition-all duration-300 border border-slate-100 flex-shrink-0"
+                title="View your preferences"
+              >
+                {isFetchingPrefs ? <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" /> : <User className="w-4 h-4 sm:w-5 sm:h-5" />}
+              </button>
               
               <div className="relative flex-1 group">
                 <input
@@ -418,6 +467,154 @@ export default function ChatPage() {
               : undefined
           }
         />
+      )}
+
+      {/* User Preferences Modal */}
+      {isPreferencesOpen && preferences && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/80 backdrop-blur-sm p-4" onClick={() => setIsPreferencesOpen(false)}>
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
+            {/* Modal Header */}
+            <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-[#003D6B] to-[#1A365D] text-white">
+              <div className="flex items-center gap-3">
+                <div className="bg-white/10 p-2 rounded-xl backdrop-blur-md">
+                    <User className="w-5 h-5 text-[#5DBDB6]" />
+                </div>
+                <div>
+                    <h2 className="text-xl font-black tracking-tight">Your Search Profile</h2>
+                    <p className="text-[#5DBDB6] text-[10px] font-bold uppercase tracking-widest">AI-Inferred Preferences</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setIsPreferencesOpen(false)}
+                className="p-2 hover:bg-white/10 rounded-full transition-colors"
+                >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-8 custom-scrollbar">
+                {/* Summary Section */}
+                <section>
+                    <div className="flex items-center gap-2 mb-3">
+                        <FileText className="w-4 h-4 text-[#003D6B]" />
+                        <h3 className="text-xs font-black uppercase tracking-widest text-[#003D6B]">Intent Summary</h3>
+                    </div>
+                    <div className="bg-slate-50 border-l-4 border-[#5DBDB6] p-4 rounded-r-2xl italic text-slate-600 text-sm leading-relaxed">
+                        &quot;{preferences.summary_of_intent || "Discuss your property requirements and I'll build your profile here."}&quot;
+                    </div>
+                </section>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    {/* Locations */}
+                    <section>
+                        <div className="flex items-center gap-2 mb-3">
+                            <Tag className="w-4 h-4 text-[#003D6B]" />
+                            <h3 className="text-xs font-black uppercase tracking-widest text-[#003D6B]">Preferred Areas</h3>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                            {preferences.preferred_locations.length > 0 ? (
+                                preferences.preferred_locations.map((loc, i) => (
+                                    <span key={i} className="px-3 py-1 bg-white border border-slate-200 rounded-full text-xs font-bold text-slate-700 shadow-sm transition-all hover:border-[#5DBDB6]">
+                                        {loc}
+                                    </span>
+                                ))
+                            ) : (
+                                <span className="text-xs text-slate-400 font-medium italic">No locations identified yet.</span>
+                            )}
+                        </div>
+                    </section>
+
+                    {/* Specs */}
+                    <section>
+                        <div className="flex items-center gap-2 mb-3">
+                            <Home className="w-4 h-4 text-[#003D6B]" />
+                            <h3 className="text-xs font-black uppercase tracking-widest text-[#003D6B]">Home Requirements</h3>
+                        </div>
+                        <div className="space-y-2">
+                             <div className="flex items-center justify-between text-xs border-b border-slate-100 pb-2">
+                                <span className="text-slate-500 font-bold uppercase tracking-wider">Property Types</span>
+                                <span className="text-[#003D6B] font-black">{preferences.property_specs.types.join(", ") || "Any"}</span>
+                             </div>
+                             <div className="flex items-center justify-between text-xs border-b border-slate-100 pb-2">
+                                <span className="text-slate-500 font-bold uppercase tracking-wider">Bedrooms</span>
+                                <span className="text-[#003D6B] font-black">{preferences.property_specs.beds || "Flexible"}</span>
+                             </div>
+                             <div className="flex items-center justify-between text-xs">
+                                <span className="text-slate-500 font-bold uppercase tracking-wider">Bathrooms</span>
+                                <span className="text-[#003D6B] font-black">{preferences.property_specs.baths || "Flexible"}</span>
+                             </div>
+                        </div>
+                    </section>
+
+                    {/* Budget */}
+                    <section>
+                        <div className="flex items-center gap-2 mb-3">
+                            <DollarSign className="w-4 h-4 text-[#003D6B]" />
+                            <h3 className="text-xs font-black uppercase tracking-widest text-[#003D6B]">Budget Range</h3>
+                        </div>
+                        <div className="bg-[#5DBDB6]/5 p-4 rounded-2xl border border-[#5DBDB6]/10">
+                            <div className="flex justify-between items-end">
+                                <div className="flex flex-col">
+                                    <span className="text-[10px] text-[#5DBDB6] font-black uppercase tracking-tighter">Budget</span>
+                                    <span className="text-lg font-black text-[#003D6B]">
+                                        {preferences.budget_range.min ? `${preferences.budget_range.min.toLocaleString()} - ` : ""}
+                                        {preferences.budget_range.max ? `${preferences.budget_range.max.toLocaleString()} EGP` : "Flexible"}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    {/* Lifestyle and Intent */}
+                    <section className="space-y-6">
+                        <div>
+                            <div className="flex items-center gap-2 mb-3">
+                                <Activity className="w-4 h-4 text-[#003D6B]" />
+                                <h3 className="text-xs font-black uppercase tracking-widest text-[#003D6B]">Lifestyle Features</h3>
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                                {preferences.lifestyle_preferences.length > 0 ? (
+                                    preferences.lifestyle_preferences.map((pref, i) => (
+                                        <span key={i} className="px-3 py-1 bg-slate-50 text-[#003D6B] rounded-lg text-xs font-bold border border-slate-100">
+                                            {pref}
+                                        </span>
+                                    ))
+                                ) : (
+                                    <span className="text-xs text-slate-400 font-medium italic">Learning your lifestyle...</span>
+                                )}
+                            </div>
+                        </div>
+
+                        {preferences.investment_intent && (
+                            <div>
+                                <div className="flex items-center gap-2 mb-3">
+                                    <Sparkles className="w-4 h-4 text-[#003D6B]" />
+                                    <h3 className="text-xs font-black uppercase tracking-widest text-[#003D6B]">Investment Intent</h3>
+                                </div>
+                                <div className="bg-[#003D6B]/5 p-3 rounded-xl border border-[#003D6B]/10 text-xs font-bold text-[#003D6B]">
+                                    {preferences.investment_intent}
+                                </div>
+                            </div>
+                        )}
+                    </section>
+                </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-6 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                    Last sync: {preferences.last_updated ? new Date(preferences.last_updated).toLocaleString() : "Never"}
+                </span>
+                <button 
+                    onClick={() => setIsPreferencesOpen(false)}
+                    className="px-6 py-2 bg-[#003D6B] text-white font-black rounded-xl text-xs shadow-lg shadow-[#003D6B]/20 active:scale-95 transition-all"
+                >
+                    Close Profile
+                </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
