@@ -474,14 +474,14 @@ export default function ChatPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/80 backdrop-blur-sm p-4" onClick={() => setIsPreferencesOpen(false)}>
           <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
             {/* Modal Header */}
-            <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-[#003D6B] to-[#1A365D] text-white">
-              <div className="flex items-center gap-3">
-                <div className="bg-white/10 p-2 rounded-xl backdrop-blur-md">
-                    <User className="w-5 h-5 text-[#5DBDB6]" />
+            <div className="p-4 sm:p-6 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-[#003D6B] to-[#1A365D] text-white">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="bg-white/10 p-1.5 sm:p-2 rounded-xl backdrop-blur-md">
+                    <User className="w-4 h-4 sm:w-5 sm:h-5 text-[#5DBDB6]" />
                 </div>
                 <div>
-                    <h2 className="text-xl font-black tracking-tight">Your Search Profile</h2>
-                    <p className="text-[#5DBDB6] text-[10px] font-bold uppercase tracking-widest">AI-Inferred Preferences</p>
+                    <h2 className="text-lg sm:text-xl font-black tracking-tight">Your Search Profile</h2>
+                    <p className="text-[#5DBDB6] text-[8px] sm:text-[10px] font-bold uppercase tracking-widest">AI-Inferred Preferences</p>
                 </div>
               </div>
               <button 
@@ -493,19 +493,19 @@ export default function ChatPage() {
             </div>
 
             {/* Modal Content */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-8 custom-scrollbar">
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 sm:space-y-8 custom-scrollbar">
                 {/* Summary Section */}
                 <section>
                     <div className="flex items-center gap-2 mb-3">
                         <FileText className="w-4 h-4 text-[#003D6B]" />
                         <h3 className="text-xs font-black uppercase tracking-widest text-[#003D6B]">Intent Summary</h3>
                     </div>
-                    <div className="bg-slate-50 border-l-4 border-[#5DBDB6] p-4 rounded-r-2xl italic text-slate-600 text-sm leading-relaxed">
+                    <div className="bg-slate-50 border-l-4 border-[#5DBDB6] p-3 sm:p-4 rounded-r-xl sm:rounded-r-2xl italic text-slate-600 text-xs sm:text-sm leading-relaxed">
                         &quot;{preferences.summary_of_intent || "Discuss your property requirements and I'll build your profile here."}&quot;
                     </div>
                 </section>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8">
                     {/* Locations */}
                     <section>
                         <div className="flex items-center gap-2 mb-3">
@@ -557,7 +557,7 @@ export default function ChatPage() {
                             <div className="flex justify-between items-end">
                                 <div className="flex flex-col">
                                     <span className="text-[10px] text-[#5DBDB6] font-black uppercase tracking-tighter">Budget</span>
-                                    <span className="text-lg font-black text-[#003D6B]">
+                                    <span className="text-base sm:text-lg font-black text-[#003D6B]">
                                         {preferences.budget_range.min ? `${preferences.budget_range.min.toLocaleString()} - ` : ""}
                                         {preferences.budget_range.max ? `${preferences.budget_range.max.toLocaleString()} EGP` : "Flexible"}
                                     </span>
@@ -602,7 +602,7 @@ export default function ChatPage() {
             </div>
 
             {/* Modal Footer */}
-            <div className="p-6 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
+            <div className="p-4 sm:p-6 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
                     Last sync: {preferences.last_updated ? new Date(preferences.last_updated).toLocaleString() : "Never"}
                 </span>
