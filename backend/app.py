@@ -104,7 +104,6 @@ class PricePredictionResponse(BaseModel):
     property_type: str
     m2: float
     Beds: float
-    Baths: float
     predicted_price_egp: float
     predicted_price_formatted: str
 
@@ -831,6 +830,54 @@ async def get_user_preferences(session_id: str, request: Request):
     doc = _safe_load_preference_doc(session_id, request.app.state)
     doc.pop("_id", None)
     return doc
+
+
+@app.delete("/chat/{session_id}/preferences")
+async def delete_user_preferences(session_id: str, request: Request):
+    deleted = False
+    
+    # Try deleting from MongoDB
+    if request.app.state.mongo_available and request.app.state.mongo_client is not None:
+        try:
+            col = _get_preferences_collection(request.app.state.mongo_client)
+            result = col.delete_one({"user_id": session_id})
+            if result.deleted_count > 0:
+                deleted = True
+        except Exception as e:
+            print(f"[mongo] Failed to delete preferences, switching to local fallback: {e}")
+            request.app.state.mongo_available = False
+            
+    # Also attempt to delete from local fallback memory just in case
+    if session_id in request.app.state.local_preferences:
+        request.app.state.local_preferences.pop(session_id)
+        deleted = True
+        
+    if not deleted:
+        raise HTTPException(status_code=404, detail=f"Preferences for session '{session_id}' not found.")
+        
+    return {"message": f"Preferences deleted for session '{session_id}'"}
+
+
+@app.get("/preferences/ids")
+async def list_preference_ids(request: Request):
+    ids = []
+    
+    # Try fetching from MongoDB
+    if request.app.state.mongo_available and request.app.state.mongo_client is not None:
+        try:
+            col = _get_preferences_collection(request.app.state.mongo_client)
+            docs = col.find({}, {"user_id": 1, "_id": 0})
+            ids = [doc.get("user_id") for doc in docs if doc.get("user_id")]
+        except Exception as e:
+            print(f"[mongo] Failed to list preference IDs, switching to local fallback: {e}")
+            request.app.state.mongo_available = False
+            ids = list(request.app.state.local_preferences.keys())
+    else:
+        # Fallback to local memory
+        ids = list(request.app.state.local_preferences.keys())
+        
+    # Return unique IDs
+    return {"user_ids": list(set(ids))}
 
 
 @app.delete("/chat/{session_id}")
