@@ -1,44 +1,68 @@
 sequenceDiagram
     autonumber
+    
+    participant User
+    participant API
+    participant MongoDB
+    participant LangSmith
+    participant Groq as Groq (Smart LLM)
+    participant ChromaLoc
+
     rect rgb(240, 248, 255)
     Note over User, API: Request Phase
     User->>API: POST /chat (question, session_id)
-    API->>MongoDB: Initialize MongoDBChatMessageHistory
-    MongoDB-->>API: Return existing history_messages
+    API->>API: _get_history(session_id)
+    alt Mongo Available
+        API->>MongoDB: Initialize MongoDBChatMessageHistory
+        MongoDB-->>API: history_messages
+    else Mongo Unavailable (Fallback)
+        Note over API: Use local_chat_histories (In-Memory)
+    end
+    end
+
+    rect rgb(255, 235, 235)
+    Note over API, Groq: Intent Detection (New Logic)
+    API->>LangSmith: Pull "is_property_search_prompt"
+    API->>Groq: Detect search intent
+    Groq-->>API: is_property_search (True/False)
+    
+    opt If is_property_search == True
+        API->>API: get_recommendations(payload)
+        Note right of API: Executes Vector Search + LLM Filtering
+        API->>User: ChatResponse (answer + properties list)
+    end
     end
 
     rect rgb(255, 249, 230)
-    Note over API, Groq: Retrieval Augmented Generation (RAG)
+    Note over API, Groq: Standard RAG Flow (If search intent is False)
     alt history_messages exists
         API->>LangSmith: Pull "chat_history_rewrite_prompt"
         API->>Groq: Rewrite question based on history
-        Groq-->>API: Return retriever_query
+        Groq-->>API: retriever_query
     else No history
         Note over API: retriever_query = original question
     end
 
-    API->>ChromaLoc: Similarity Search (k=7)
-    ChromaLoc-->>API: Return retrieved_docs (context)
-    end
-
-    rect rgb(245, 245, 245)
-    Note over API, Groq: Response Generation
+    API->>ChromaLoc: Similarity Search (k=10)
+    ChromaLoc-->>API: retrieved_docs (context)
+    
     API->>LangSmith: Pull "property_location_prompt"
     API->>Groq: Generate answer (context + history + question)
-    Groq-->>API: Return answer
+    Groq-->>API: answer
     end
 
     rect rgb(230, 255, 230)
-    Note over API, MongoDB: Persistence & Preferences
-    API->>MongoDB: Save User Message & AI Answer
+    Note over API, MongoDB: Persistence & Safe Preferences
+    API->>API: Save User & AI messages (Mongo or Local)
     
-    par Async Preference Update
-        API->>API: maybe_update_preferences()
+    par Async Preference Update (Safe)
+        API->>API: maybe_update_preferences_safe()
         Note right of API: If turn_counter % 3 == 0
         API->>LangSmith: Pull "extract_preferences_from_history_prompt"
-        API->>Groq: Extract profile fields
-        Groq-->>API: New JSON Profile
-        API->>MongoDB: Upsert user_preferences collection
+        API->>Groq: Extract profile from new messages
+        Groq-->>API: Extracted JSON
+        API->>API: _safe_save_preference_doc()
+        Note right of API: Upserts to MongoDB or local_preferences
     end
     end
 
