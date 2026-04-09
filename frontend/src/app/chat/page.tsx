@@ -17,6 +17,7 @@ interface Message {
   text: string;
   timestamp: Date;
   properties?: PropertyData[];
+  responseTime?: number;
 }
 
 interface UserPreferences {
@@ -75,6 +76,19 @@ export default function ChatPage() {
     },
   ]);
   const [isLoading, setIsLoading] = useState(false);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (isLoading) {
+      setElapsedSeconds(0);
+      interval = setInterval(() => {
+        setElapsedSeconds((prev) => prev + 1);
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [isLoading]);
+
   const [selectedProperty, setSelectedProperty] = useState<{
     property: PropertyData;
     index: number;
@@ -84,6 +98,7 @@ export default function ChatPage() {
   const [preferences, setPreferences] = useState<UserPreferences | null>(null);
   const [isPreferencesOpen, setIsPreferencesOpen] = useState(false);
   const [isFetchingPrefs, setIsFetchingPrefs] = useState(false);
+  const [isDeletingPrefs, setIsDeletingPrefs] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Fetch history when page loads
@@ -136,6 +151,8 @@ export default function ChatPage() {
     const currentInput = input;
     setInput("");
     setIsLoading(true);
+    setElapsedSeconds(0);
+    const startTime = Date.now();
 
     try {
       const response = await fetch(`${API_BASE_URL}/chat`, {
@@ -150,6 +167,7 @@ export default function ChatPage() {
       if (!response.ok) throw new Error("Failed to get response");
 
       const data = await response.json();
+      const duration = Math.round((Date.now() - startTime) / 1000);
       
       const botMessage: Message = {
         id: (Date.now() + 1).toString(),
@@ -157,6 +175,7 @@ export default function ChatPage() {
         text: data.answer,
         timestamp: new Date(),
         properties: data.properties,
+        responseTime: duration,
       };
       setMessages((prev) => [...prev, botMessage]);
     } catch (err) {
@@ -217,6 +236,26 @@ export default function ChatPage() {
       console.error("Failed to fetch preferences:", err);
     } finally {
       setIsFetchingPrefs(false);
+    }
+  };
+
+  const deletePreferences = async () => {
+    if (!sessionId) return;
+    if (confirm("Are you sure you want to reset your search profile? This will delete all AI-inferred preferences for this session.")) {
+      setIsDeletingPrefs(true);
+      try {
+        const response = await fetch(`${API_BASE_URL}/chat/${sessionId}/preferences`, {
+          method: "DELETE"
+        });
+        if (response.ok) {
+          setPreferences(null);
+          setIsPreferencesOpen(false);
+        }
+      } catch (err) {
+        console.error("Failed to delete preferences:", err);
+      } finally {
+        setIsDeletingPrefs(false);
+      }
     }
   };
 
@@ -325,8 +364,14 @@ export default function ChatPage() {
                     </div>
                   )}
 
-                  <div className={`text-[10px] mt-3 opacity-40 font-bold ${m.type === "user" ? "text-right" : "text-left"}`}>
-                    {m.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  <div className={`text-[10px] mt-3 opacity-40 font-bold flex items-center gap-2 ${m.type === "user" ? "justify-end" : "justify-start"}`}>
+                    <span>{m.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                    {m.type === "bot" && m.responseTime !== undefined && (
+                      <>
+                        <span className="w-1 h-1 bg-slate-400 rounded-full" />
+                        <span className="text-[#5DBDB6]">{m.responseTime}s</span>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
@@ -343,7 +388,10 @@ export default function ChatPage() {
                         <div className="w-2 h-2 bg-[#5DBDB6] rounded-full animate-bounce [animation-delay:-0.15s]"></div>
                         <div className="w-2 h-2 bg-[#5DBDB6] rounded-full animate-bounce"></div>
                     </div>
-                    <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Analyzing Data...</span>
+                    <div className="flex flex-col">
+                        <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Analyzing Data...</span>
+                        <span className="text-[10px] font-black text-[#5DBDB6] mt-0.5 animate-pulse">{elapsedSeconds}s elapsed</span>
+                    </div>
                 </div>
               </div>
             )}
@@ -606,12 +654,22 @@ export default function ChatPage() {
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
                     Last sync: {preferences.last_updated ? new Date(preferences.last_updated).toLocaleString() : "Never"}
                 </span>
-                <button 
-                    onClick={() => setIsPreferencesOpen(false)}
-                    className="px-6 py-2 bg-[#003D6B] text-white font-black rounded-xl text-xs shadow-lg shadow-[#003D6B]/20 active:scale-95 transition-all"
-                >
-                    Close Profile
-                </button>
+                <div className="flex items-center gap-3">
+                    <button 
+                        onClick={deletePreferences}
+                        disabled={isDeletingPrefs}
+                        className="px-4 py-2 text-red-500 hover:bg-red-50 font-bold rounded-xl text-xs transition-all flex items-center gap-2 border border-red-100 disabled:opacity-50"
+                    >
+                        {isDeletingPrefs ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
+                        Reset Profile
+                    </button>
+                    <button 
+                        onClick={() => setIsPreferencesOpen(false)}
+                        className="px-6 py-2 bg-[#003D6B] text-white font-black rounded-xl text-xs shadow-lg shadow-[#003D6B]/20 active:scale-95 transition-all"
+                    >
+                        Close Profile
+                    </button>
+                </div>
             </div>
           </div>
         </div>
