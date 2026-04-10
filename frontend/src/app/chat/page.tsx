@@ -308,7 +308,7 @@ export default function ChatPage() {
         <div className="bg-white rounded-2xl sm:rounded-3xl shadow-2xl border border-slate-100 flex-1 flex flex-col overflow-hidden min-h-[400px]">
           
           {/* Messages Wrapper */}
-          <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 sm:space-y-6 bg-slate-50/30 custom-scrollbar flex flex-col">
+          <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-1.5 sm:space-y-2.5 bg-slate-50/30 custom-scrollbar flex flex-col">
             <style jsx>{`
               .chat-markdown :global(p) { margin-bottom: 0.75rem; line-height: 1.6; }
               .chat-markdown :global(ul) { list-style-type: disc; padding-left: 1.5rem; margin-bottom: 0.75rem; }
@@ -385,7 +385,7 @@ export default function ChatPage() {
 
                   <button
                     onClick={() => handleCopy(m.text, m.id)}
-                    className={`mt-1.5 flex items-center gap-1.5 px-2 py-1 rounded-lg transition-all duration-300 ${
+                    className={`mt-0.5 flex items-center gap-1.5 px-2 py-1 rounded-lg transition-all duration-300 ${
                       copiedId === m.id 
                         ? "text-[#5DBDB6] opacity-100" 
                         : "text-slate-400 opacity-0 group-hover:opacity-100 hover:text-[#003D6B] hover:bg-slate-100"
