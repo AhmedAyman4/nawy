@@ -45,7 +45,7 @@ export function PropertyModal({
     >
       {/* Main Modal Container */}
       <div
-        className="relative w-full max-w-[90%] sm:max-w-2xl md:max-w-3xl max-h-[85vh] md:max-h-[80vh] bg-white rounded-3xl md:rounded-xl shadow-2xl overflow-hidden flex flex-col md:flex-row animate-in fade-in zoom-in-95 duration-200"
+        className="relative w-full max-w-[88%] sm:max-w-2xl md:max-w-3xl max-h-[80vh] md:max-h-[80vh] bg-white rounded-3xl md:rounded-xl shadow-2xl overflow-hidden flex flex-col md:flex-row animate-in fade-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Action Buttons: Close and Favorite */}
@@ -71,7 +71,7 @@ export function PropertyModal({
         </div>
 
         {/* Left Side: Image */}
-        <div className="w-full md:w-[40%] h-44 sm:h-56 md:h-auto relative bg-slate-200 shrink-0">
+        <div className="w-full md:w-[40%] h-36 sm:h-56 md:h-auto relative bg-slate-200 shrink-0">
           <img
             src={
               property.cover_image ||
@@ -97,7 +97,7 @@ export function PropertyModal({
         </div>
 
         {/* Right Side: Content */}
-        <div className="w-full md:w-[60%] flex flex-col p-4 sm:p-5 md:p-6 overflow-y-auto">
+        <div className="w-full md:w-[60%] flex flex-col p-3.5 sm:p-5 md:p-6 overflow-y-auto">
           {property.developer_logo && (
             <img
               src={property.developer_logo}
@@ -111,12 +111,12 @@ export function PropertyModal({
             {property.property_name || "Unnamed Property"}
           </h2>
 
-          <div className="flex items-center text-slate-500 text-xs mb-4">
+          <div className="flex items-center text-slate-500 text-xs mb-3">
             <MapPin className="w-3.5 h-3.5 mr-1.5 shrink-0" />
             <span>{property.location || "Location unavailable"}</span>
           </div>
 
-          <div className="bg-[#5DBDB6]/5 p-2.5 rounded-xl mb-3 border border-[#5DBDB6]/10">
+          <div className="bg-[#5DBDB6]/5 p-2 rounded-xl mb-2.5 border border-[#5DBDB6]/10">
             <p className="text-[10px] text-[#5DBDB6] font-extrabold uppercase tracking-widest mb-0.5">Asking Price</p>
             <p className="text-lg sm:text-2xl font-black text-[#1A365D]">
               {property.price ||
@@ -131,7 +131,7 @@ export function PropertyModal({
             )}
           </div>
 
-          <div className="grid grid-cols-3 gap-2 mb-4">
+          <div className="grid grid-cols-3 gap-2 mb-3">
             <div className="flex flex-col items-center justify-center p-2 bg-[#5DBDB6]/5 rounded-lg border border-[#5DBDB6]/10">
               <Bed className="w-4 h-4 text-[#5DBDB6] mb-1" />
               <span className="text-slate-500 text-[10px] uppercase tracking-wider mb-0.5">
@@ -161,7 +161,7 @@ export function PropertyModal({
             </div>
           </div>
 
-          <div className="mb-4">
+          <div className="mb-3">
             <h3 className="font-bold text-[#1A365D] mb-1 text-sm">
               Property Details
             </h3>
@@ -171,7 +171,7 @@ export function PropertyModal({
             </p>
           </div>
 
-          <div className="mt-auto pt-4 border-t border-slate-100 flex flex-col gap-3">
+          <div className="mt-auto pt-3 border-t border-slate-100 flex flex-col gap-2.5">
             {property.url_path ? (
               <a
                 href={property.url_path}
