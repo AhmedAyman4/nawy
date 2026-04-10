@@ -67,14 +67,14 @@ export default function ChatPage() {
     }
   }, []);
 
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: "welcome",
-      type: "bot",
-      text: "Welcome! I'm here to help you explore the best locations and compounds in Egypt. Feel free to ask about any area or project listed on Nawy!",
-      timestamp: new Date(),
-    },
-  ]);
+  const WELCOME_MESSAGE: Message = {
+    id: "welcome",
+    type: "bot",
+    text: "Welcome! I'm here to help you explore the best locations and compounds in Egypt. Feel free to ask about any area or project listed on Nawy!",
+    timestamp: new Date(),
+  };
+
+  const [messages, setMessages] = useState<Message[]>([WELCOME_MESSAGE]);
   const [isLoading, setIsLoading] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -118,13 +118,15 @@ export default function ChatPage() {
         if (response.ok) {
           const data = await response.json();
           if (data.history && data.history.length > 0) {
-            const formattedMessages: Message[] = data.history.map((msg: { role: string; content: string }, index: number) => ({
+            const historyMessages: Message[] = data.history.map((msg: { role: string; content: string }, index: number) => ({
               id: `history_${index}`,
               type: msg.role === 'human' ? 'user' : 'bot',
               text: msg.content,
               timestamp: new Date(),
             }));
-            setMessages(formattedMessages);
+            
+            // Keep welcome message at the top, then add history
+            setMessages([WELCOME_MESSAGE, ...historyMessages]);
           }
         }
       } catch (err) {
@@ -269,7 +271,7 @@ export default function ChatPage() {
   return (
     <div className="min-h-screen bg-slate-50 font-sans flex flex-col">
       {/* Header Area */}
-      <header className="text-white pt-20 sm:pt-24 pb-8 sm:pb-12 px-4 shadow-2xl relative z-10 shrink-0 overflow-hidden">
+      <header className="text-white pt-28 sm:pt-32 pb-8 sm:pb-12 px-4 shadow-2xl relative z-10 shrink-0 overflow-hidden">
         <div className="absolute inset-0 z-0">
           <Image
             src="/luxury_hero.jpg"
@@ -385,7 +387,7 @@ export default function ChatPage() {
 
                   <button
                     onClick={() => handleCopy(m.text, m.id)}
-                    className={`mt-0.5 flex items-center gap-1.5 px-2 py-1 rounded-lg transition-all duration-300 ${
+                    className={`mt-0.5 mx-2 sm:mx-4 flex items-center gap-1.5 px-2 py-1 rounded-lg transition-all duration-300 ${
                       copiedId === m.id 
                         ? "text-[#5DBDB6] opacity-100" 
                         : "text-slate-400 opacity-0 group-hover:opacity-100 hover:text-[#003D6B] hover:bg-slate-100"

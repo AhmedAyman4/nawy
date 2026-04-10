@@ -1,11 +1,17 @@
+"use client";
+
 import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Linkedin, Mail } from 'lucide-react';
+import { usePathname } from 'next/navigation';
 
 export const Footer: React.FC = () => {
+  const pathname = usePathname();
+  const isChatPage = pathname === '/chat';
+
   return (
-    <footer className="w-full py-2 sm:py-3 px-4 sm:px-6 lg:px-8 bg-[#003D6B] border-t border-white/5 relative z-10 mt-auto shadow-[0_-10px_40px_rgba(0,0,0,0.1)]">
+    <footer className={`w-full py-2 sm:py-3 px-4 sm:px-6 lg:px-8 bg-[#003D6B] border-t border-white/5 relative z-10 mt-auto shadow-[0_-10px_40px_rgba(0,0,0,0.1)] ${isChatPage ? 'hidden sm:block' : ''}`}>
       <div className="max-w-[1650px] mx-auto">
         {/* Main Footer Row */}
         <div className="flex flex-col md:flex-row items-center justify-between gap-2 md:gap-4">
