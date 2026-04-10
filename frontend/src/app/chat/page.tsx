@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
-import { Send, Loader2, MapPin, Trash2, ArrowLeft, MessageSquare, Info, Sparkles, User, Tag, Home, DollarSign, Activity, FileText, X } from "lucide-react";
+import { Send, Loader2, MapPin, Trash2, ArrowLeft, MessageSquare, Info, Sparkles, User, Tag, Home, DollarSign, Activity, FileText, X, Copy, Check } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import ReactMarkdown from "react-markdown";
@@ -77,6 +77,13 @@ export default function ChatPage() {
   ]);
   const [isLoading, setIsLoading] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  const handleCopy = (text: string, id: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 2000);
+  };
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -315,7 +322,7 @@ export default function ChatPage() {
              {messages.map((m) => (
               <div
                 key={m.id}
-                className={`flex gap-2 sm:gap-4 ${m.type === "user" ? "flex-row-reverse" : "justify-start"}`}
+                className={`flex gap-2 sm:gap-4 group ${m.type === "user" ? "flex-row-reverse" : "justify-start"}`}
               >
                 <div className={`shrink-0 w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center shadow-sm ${
                   m.type === "user" ? "bg-[#003D6B]" : "bg-[#5DBDB6]"
@@ -327,52 +334,76 @@ export default function ChatPage() {
                   )}
                 </div>
                 
-                <div
-                  className={`max-w-[88%] sm:max-w-2xl px-4 py-3 sm:px-6 sm:py-4 rounded-2xl sm:rounded-3xl text-sm sm:text-base ${
-                    m.type === "user"
-                      ? "bg-[#003D6B] text-white rounded-tr-none shadow-xl"
-                      : "bg-white text-slate-700 rounded-tl-none shadow-md border border-slate-100"
-                  }`}
-                >
-                  <div className="chat-markdown prose prose-sm sm:prose-base prose-slate max-w-none">
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                    {m.text}
-                    </ReactMarkdown>
-                  </div>
-                  {m.properties && m.properties.length > 0 && (
-                    <div className="mt-4 -mx-2 sm:-mx-4 overflow-x-auto pb-4 custom-scrollbar">
-                      <div className="flex gap-3 px-2 sm:px-4 min-w-max">
-                        {m.properties.map((prop, idx) => (
-                          <div key={prop.id || idx} className="w-48 sm:w-56">
-                            <PropertyCard 
-                              property={prop} 
-                              onClick={() => setSelectedProperty({
-                                property: prop,
-                                index: idx,
-                                total: m.properties!.length,
-                                messageId: m.id
-                              })}
-                            />
-                          </div>
-                        ))}
-                      </div>
-                      <div className="px-4 mt-2">
-                         <span className="text-[9px] font-black uppercase tracking-tighter text-[#5DBDB6]/60">
-                           Horizontal Scroll to see more properties &rarr;
-                         </span>
-                      </div>
+                <div className={`flex flex-col ${m.type === "user" ? "items-end" : "items-start"} max-w-[88%] sm:max-w-2xl`}>
+                  <div
+                    className={`w-full px-4 py-3 sm:px-6 sm:py-4 rounded-2xl sm:rounded-3xl text-sm sm:text-base ${
+                      m.type === "user"
+                        ? "bg-[#003D6B] text-white rounded-tr-none shadow-xl"
+                        : "bg-white text-slate-700 rounded-tl-none shadow-md border border-slate-100"
+                    }`}
+                  >
+                    <div className="chat-markdown prose prose-sm sm:prose-base prose-slate max-w-none">
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                      {m.text}
+                      </ReactMarkdown>
                     </div>
-                  )}
+                    {m.properties && m.properties.length > 0 && (
+                      <div className="mt-4 -mx-2 sm:-mx-4 overflow-x-auto pb-4 custom-scrollbar">
+                        <div className="flex gap-3 px-2 sm:px-4 min-w-max">
+                          {m.properties.map((prop, idx) => (
+                            <div key={prop.id || idx} className="w-48 sm:w-56">
+                              <PropertyCard 
+                                property={prop} 
+                                onClick={() => setSelectedProperty({
+                                  property: prop,
+                                  index: idx,
+                                  total: m.properties!.length,
+                                  messageId: m.id
+                                })}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                        <div className="px-4 mt-2">
+                           <span className="text-[9px] font-black uppercase tracking-tighter text-[#5DBDB6]/60">
+                             Horizontal Scroll to see more properties &rarr;
+                           </span>
+                        </div>
+                      </div>
+                    )}
 
-                  <div className={`text-[10px] mt-3 opacity-40 font-bold flex items-center gap-2 ${m.type === "user" ? "justify-end" : "justify-start"}`}>
-                    <span>{m.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                    {m.type === "bot" && m.responseTime !== undefined && (
+                    <div className={`text-[10px] mt-3 opacity-40 font-bold flex items-center gap-2 ${m.type === "user" ? "justify-end" : "justify-start"}`}>
+                      <span>{m.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                      {m.type === "bot" && m.responseTime !== undefined && (
+                        <>
+                          <span className="w-1 h-1 bg-slate-400 rounded-full" />
+                          <span className="text-[#5DBDB6]">{m.responseTime}s</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => handleCopy(m.text, m.id)}
+                    className={`mt-1.5 flex items-center gap-1.5 px-2 py-1 rounded-lg transition-all duration-300 ${
+                      copiedId === m.id 
+                        ? "text-[#5DBDB6] opacity-100" 
+                        : "text-slate-400 opacity-0 group-hover:opacity-100 hover:text-[#003D6B] hover:bg-slate-100"
+                    }`}
+                    title="Copy message text"
+                  >
+                    {copiedId === m.id ? (
                       <>
-                        <span className="w-1 h-1 bg-slate-400 rounded-full" />
-                        <span className="text-[#5DBDB6]">{m.responseTime}s</span>
+                        <Check className="w-3 h-3" />
+                        <span className="text-[9px] font-black uppercase tracking-widest">Copied</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-3 h-3" />
+                        <span className="text-[9px] font-black uppercase tracking-widest">Copy</span>
                       </>
                     )}
-                  </div>
+                  </button>
                 </div>
               </div>
             ))}
