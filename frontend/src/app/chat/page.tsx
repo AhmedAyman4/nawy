@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
-import { Send, Loader2, MapPin, Trash2, ArrowLeft, MessageSquare, Info, Sparkles, User, Tag, Home, DollarSign, Activity, FileText, X, Copy, Check } from "lucide-react";
+import { Send, Loader2, MapPin, Trash2, ArrowLeft, MessageSquare, Info, Sparkles, User, Tag, Home, DollarSign, Activity, FileText, X, Copy, Check, Bot } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import ReactMarkdown from "react-markdown";
@@ -332,7 +332,7 @@ export default function ChatPage() {
                   {m.type === "user" ? (
                     <span className="text-[9px] sm:text-[10px] font-black text-white">YOU</span>
                   ) : (
-                    <Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white" />
+                    <Bot className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white" />
                   )}
                 </div>
                 
@@ -416,7 +416,7 @@ export default function ChatPage() {
             {isLoading && (
               <div className="flex justify-start gap-4">
                 <div className="shrink-0 w-8 h-8 rounded-full bg-[#5DBDB6] flex items-center justify-center opacity-50">
-                   <Sparkles className="w-4 h-4 text-white" />
+                   <Bot className="w-4 h-4 text-white" />
                 </div>
                 <div className="bg-white px-6 py-4 rounded-3xl rounded-tl-none border border-slate-100 shadow-md flex items-center gap-3">
                     <div className="flex gap-1.5">
