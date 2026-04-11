@@ -350,8 +350,8 @@ export default function ChatPage() {
                       </ReactMarkdown>
                     </div>
                     {m.properties && m.properties.length > 0 && (
-                      <div className="mt-4 -mx-2 sm:-mx-4 overflow-x-auto pb-4 custom-scrollbar">
-                        <div className="flex gap-3 px-2 sm:px-4 min-w-max">
+                      <div className="mt-4 overflow-x-auto pb-4 custom-scrollbar">
+                        <div className="flex gap-3 min-w-max">
                           {m.properties.map((prop, idx) => (
                             <div key={prop.id || idx} className="w-48 sm:w-56">
                               <PropertyCard 
@@ -366,11 +366,6 @@ export default function ChatPage() {
                             </div>
                           ))}
                         </div>
-                        <div className="px-4 mt-2">
-                           <span className="text-[9px] font-black uppercase tracking-tighter text-[#5DBDB6]/60">
-                             Horizontal Scroll to see more properties &rarr;
-                           </span>
-                        </div>
                       </div>
                     )}
 
@@ -380,6 +375,14 @@ export default function ChatPage() {
                         <>
                           <span className="w-1 h-1 bg-slate-400 rounded-full" />
                           <span className="text-[#5DBDB6]">{m.responseTime}s</span>
+                        </>
+                      )}
+                      {m.properties && m.properties.length > 0 && (
+                        <>
+                          <span className="w-1 h-1 bg-slate-400 rounded-full" />
+                          <span className="text-slate-400">
+                            Horizontal Scroll &rarr;
+                          </span>
                         </>
                       )}
                     </div>
