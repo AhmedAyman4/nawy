@@ -387,22 +387,22 @@ export default function ChatPage() {
 
                   <button
                     onClick={() => handleCopy(m.text, m.id)}
-                    className={`mt-0.5 mx-2 sm:mx-4 flex items-center gap-1.5 px-2 py-1 rounded-lg transition-all duration-300 ${
+                    className={`mt-1.5 mx-2 sm:mx-4 flex items-center gap-1.5 px-2.5 py-1 rounded-full border transition-all duration-300 ${
                       copiedId === m.id 
-                        ? "text-[#5DBDB6] opacity-100" 
-                        : "text-slate-400 opacity-0 group-hover:opacity-100 hover:text-[#003D6B] hover:bg-slate-100"
+                        ? "bg-[#5DBDB6]/10 border-[#5DBDB6]/20 text-[#5DBDB6] opacity-100 shadow-sm" 
+                        : "bg-slate-50/50 border-slate-100 text-slate-400 opacity-0 group-hover:opacity-100 hover:text-[#003D6B] hover:bg-white hover:border-slate-200 hover:shadow-sm"
                     }`}
                     title="Copy message text"
                   >
                     {copiedId === m.id ? (
                       <>
                         <Check className="w-3 h-3" />
-                        <span className="text-[9px] font-black uppercase tracking-widest">Copied</span>
+                        <span className="text-[10px] font-bold">Copied</span>
                       </>
                     ) : (
                       <>
                         <Copy className="w-3 h-3" />
-                        <span className="text-[9px] font-black uppercase tracking-widest">Copy</span>
+                        <span className="text-[10px] font-bold">Copy</span>
                       </>
                     )}
                   </button>
@@ -422,7 +422,7 @@ export default function ChatPage() {
                         <div className="w-2 h-2 bg-[#5DBDB6] rounded-full animate-bounce"></div>
                     </div>
                     <div className="flex flex-col">
-                        <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Analyzing Data...</span>
+                        <span className="text-[10px] font-bold text-slate-400">Analyzing Data...</span>
                         <span className="text-[10px] font-black text-[#5DBDB6] mt-0.5 animate-pulse">{elapsedSeconds}s elapsed</span>
                     </div>
                 </div>
