@@ -4,7 +4,7 @@ A comprehensive real-estate platform that leverages semantic search, AI-driven r
 
 ## Overview
 
-The **Nawy Property Recommender** is an end-to-end solution designed to transform how users search for real estate by replacing rigid filters with natural language queries (e.g., *"Looking for a luxury villa in New Cairo with a pool and at least 3 bedrooms under 15 million EGP"*). Beyond searching for properties, the system features an intelligent **AI Consultant** that allows users to chat and ask deep-dive questions about locations, compounds, and community details—including up-to-date information on nearby **schools, hospitals, sports clubs, and lifestyle facilities**—by combining data scraping, advanced preprocessing, vector-based semantic search, and Large Language Models (LLMs) to provide a comprehensive "digital property consultant" experience.
+The **Nawy Property Recommender** is an end-to-end solution designed to transform how users search for real estate by replacing rigid filters with natural language queries. Beyond searching for properties, the system features an intelligent **AI Consultant** that allows users to chat and ask deep-dive questions about **locations, compounds, and community details** including up-to-date information on nearby **schools, hospitals, sports clubs, and lifestyle facilities** by combining data scraping, advanced preprocessing, vector-based semantic search, and Large Language Models (LLMs) to provide a comprehensive "digital property consultant" experience.
 
 ## High Level Architecture
 
@@ -51,7 +51,7 @@ nawy/
 
 **Natural Language Search Sequence Diagram**
 
-<img src="backend/assets/diagrams/search/natural-language-search-sequence-diagram.png" alt="Natural Language Search Sequence Diagram" width="650" />
+<img src="backend/assets/diagrams/search/natural-language-search-sequence-diagram.png" alt="Natural Language Search Sequence Diagram" width="500" />
 
 ### 2. **AI Personal Consultant (RAG Chat)**
 - **Location Insights**: Chatbot that answers questions about specific areas/compounds using RAG (Retrieval-Augmented Generation).
@@ -59,11 +59,11 @@ nawy/
 
 **Chat Endpoint Sequence Diagram**
 
-<img src="backend/assets/diagrams/chat/chat-endpoint-sequence-diagram.png" alt="Chat Endpoint Sequence Diagram" width="650" />
+<img src="backend/assets/diagrams/chat/chat-endpoint-sequence-diagram.png" alt="Chat Endpoint Sequence Diagram" width="500" />
 
 **Compare Parallel RAG sequence diagram**
 
-<img src="backend/assets/diagrams/compare/Compare-Parallel-RAG-sequence-diagram.png" alt="Compare Parallel RAG sequence diagram" width="650" />
+<img src="backend/assets/diagrams/compare/Compare-Parallel-RAG-sequence-diagram.png" alt="Compare Parallel RAG sequence diagram" width="500" />
 
 ### 3. **Smart Price Prediction**
 - **XGBoost Engine**: Predicts property prices based on location, size, property type, and features.
@@ -71,7 +71,7 @@ nawy/
 
 **Price Prediction Sequence Diagram**
 
-<img src="backend/assets/diagrams/prediction/price-prediction-sequence-diagram.png" alt="Price Prediction Sequence Diagram" width="650" />
+<img src="backend/assets/diagrams/prediction/price-prediction-sequence-diagram.png" alt="Price Prediction Sequence Diagram" width="500" />
 
 ### 4. **Modern Web UI**
 - **Responsive Design**: Optimized for mobile and desktop.
