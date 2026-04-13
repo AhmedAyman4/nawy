@@ -1,6 +1,6 @@
 # Nawy Property Recommender
 
-A comprehensive real-estate platform that leverages semantic search, AI-driven recommendations, and price prediction to help users find their ideal property on Nawy.com.
+A comprehensive real-estate platform that leverages natural language chat, semantic search, AI-driven recommendations, and price prediction to help users find their ideal property on [Nawy.com](https://www.nawy.com/).
 
 ## Overview
 
