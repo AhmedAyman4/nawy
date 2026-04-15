@@ -87,6 +87,7 @@ class ChatResponse(BaseModel):
     session_id: str
     history_length: int
     properties: Optional[List[Dict[str, Any]]] = None  # populated only for property search questions
+    sources: Optional[List[str]] = None  # populated with URLs from vectorstore metadata
 
 class CompareRequest(BaseModel):
     id1: str
@@ -163,7 +164,7 @@ async def lifespan(app: FastAPI):
 
     print("Loading Locations and Compounds VectorDB...")
     app.state.locations_and_compounds_vectorstore = Chroma(
-        persist_directory="./locations_and_compounds_db",
+        persist_directory="./locations_compounds_and_blogs_db",
         embedding_function=embeddings
     )
     print("Locations and Compounds VectorDB loaded!")
@@ -773,6 +774,7 @@ async def chat_about_location(request: Request, payload: ChatRequest):
                 "session_id": session_id,
                 "history_length": len(chat_history.messages) // 2,
                 "properties": properties,
+                "sources": [],
             }
         # -------------------------------------------------------
         # End of change — normal location RAG flow below is untouched
@@ -788,6 +790,14 @@ async def chat_about_location(request: Request, payload: ChatRequest):
             retriever_query = payload.question
 
         retrieved_docs = vectorstore.as_retriever(search_kwargs={"k": 10}).invoke(retriever_query)
+        
+        # Extract unique URLs from metadata
+        sources_list = []
+        for doc in retrieved_docs:
+            url = doc.metadata.get("url")
+            if url and url not in sources_list:
+                sources_list.append(url)
+
         context = "\n\n".join(doc.page_content for doc in retrieved_docs)
         location_prompt = request.app.state.prompts["location"]
         response = (location_prompt | llm).invoke({
@@ -815,7 +825,8 @@ async def chat_about_location(request: Request, payload: ChatRequest):
             "question": payload.question,
             "answer": answer,
             "session_id": session_id,
-            "history_length": len(chat_history.messages) // 2
+            "history_length": len(chat_history.messages) // 2,
+            "sources": sources_list
         }
 
     except HTTPException:

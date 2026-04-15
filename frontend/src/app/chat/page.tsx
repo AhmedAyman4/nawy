@@ -17,6 +17,7 @@ interface Message {
   text: string;
   timestamp: Date;
   properties?: PropertyData[];
+  sources?: string[];
   responseTime?: number;
 }
 
@@ -78,6 +79,7 @@ export default function ChatPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [showSourcesId, setShowSourcesId] = useState<string | null>(null);
 
   const handleCopy = (text: string, id: string) => {
     navigator.clipboard.writeText(text);
@@ -184,6 +186,7 @@ export default function ChatPage() {
         text: data.answer,
         timestamp: new Date(),
         properties: data.properties,
+        sources: data.sources,
         responseTime: duration,
       };
       setMessages((prev) => [...prev, botMessage]);
@@ -388,27 +391,70 @@ export default function ChatPage() {
                     </div>
                   </div>
 
-                  <button
-                    onClick={() => handleCopy(m.text, m.id)}
-                    className={`mt-1.5 mx-2 sm:mx-4 flex items-center gap-1.5 px-2.5 py-1 rounded-full border transition-all duration-300 ${
-                      copiedId === m.id 
-                        ? "bg-[#5DBDB6]/10 border-[#5DBDB6]/20 text-[#5DBDB6] opacity-100 shadow-sm" 
-                        : "bg-slate-50/50 border-slate-100 text-slate-400 opacity-0 group-hover:opacity-100 hover:text-[#003D6B] hover:bg-white hover:border-slate-200 hover:shadow-sm"
-                    }`}
-                    title="Copy message text"
-                  >
-                    {copiedId === m.id ? (
-                      <>
-                        <Check className="w-3 h-3" />
-                        <span className="text-[10px] font-bold">Copied</span>
-                      </>
-                    ) : (
-                      <>
-                        <Copy className="w-3 h-3" />
-                        <span className="text-[10px] font-bold">Copy</span>
-                      </>
+                  <div className={`flex items-center gap-2 mx-2 sm:mx-4`}>
+                    <button
+                      onClick={() => handleCopy(m.text, m.id)}
+                      className={`mt-1.5 flex items-center gap-1.5 px-2.5 py-1 rounded-full border transition-all duration-300 ${
+                        copiedId === m.id 
+                          ? "bg-[#5DBDB6]/10 border-[#5DBDB6]/20 text-[#5DBDB6] opacity-100 shadow-sm" 
+                          : "bg-slate-50/50 border-slate-100 text-slate-400 opacity-0 group-hover:opacity-100 hover:text-[#003D6B] hover:bg-white hover:border-slate-200 hover:shadow-sm"
+                      }`}
+                      title="Copy message text"
+                    >
+                      {copiedId === m.id ? (
+                        <>
+                          <Check className="w-3 h-3" />
+                          <span className="text-[10px] font-bold">Copied</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-3 h-3" />
+                          <span className="text-[10px] font-bold">Copy</span>
+                        </>
+                      )}
+                    </button>
+
+                    {m.sources && m.sources.length > 0 && (
+                      <div className="relative">
+                        <button
+                          onClick={() => setShowSourcesId(showSourcesId === m.id ? null : m.id)}
+                          className={`mt-1.5 flex items-center gap-1.5 px-2.5 py-1 rounded-full border transition-all duration-300 ${
+                            showSourcesId === m.id
+                              ? "bg-[#5DBDB6]/10 border-[#5DBDB6]/20 text-[#5DBDB6] opacity-100 shadow-sm"
+                              : "bg-slate-50/50 border-slate-100 text-slate-400 opacity-0 group-hover:opacity-100 hover:text-[#5DBDB6] hover:bg-white hover:border-[#5DBDB6]/20 hover:shadow-sm"
+                          }`}
+                          title="View sources"
+                        >
+                          <FileText className="w-3 h-3" />
+                          <span className="text-[10px] font-bold">Sources</span>
+                        </button>
+                        
+                        {showSourcesId === m.id && (
+                          <div className="absolute bottom-full left-0 mb-2 w-64 bg-white rounded-xl shadow-2xl border border-slate-100 p-3 z-50 animate-in fade-in slide-in-from-bottom-2">
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-[10px] font-black text-[#003D6B] uppercase tracking-wider">Citations & Sources</span>
+                              <button onClick={() => setShowSourcesId(null)} className="text-slate-400 hover:text-slate-600">
+                                <X className="w-3 h-3" />
+                              </button>
+                            </div>
+                            <div className="space-y-1 max-h-40 overflow-y-auto custom-scrollbar">
+                              {m.sources.map((src, i) => (
+                                <a 
+                                  key={i} 
+                                  href={src} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="block p-2 text-[10px] text-slate-600 hover:bg-[#5DBDB6]/5 hover:text-[#5DBDB6] rounded-lg border border-transparent hover:border-[#5DBDB6]/10 transition-all truncate"
+                                >
+                                  {src.replace('https://', '').replace('www.', '')}
+                                </a>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     )}
-                  </button>
+                  </div>
                 </div>
               </div>
             ))}
