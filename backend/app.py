@@ -740,6 +740,16 @@ async def chat_about_location(request: Request, payload: ChatRequest):
 
         history_messages = chat_history.messages[-HISTORY_MESSAGES_LIMIT:]
 
+        # Strip additional_kwargs to prevent large property arrays from blowing up the LLM context
+        sanitized_history = []
+        for msg in history_messages:
+            if isinstance(msg, HumanMessage):
+                sanitized_history.append(HumanMessage(content=msg.content))
+            elif isinstance(msg, AIMessage):
+                sanitized_history.append(AIMessage(content=msg.content))
+            else:
+                sanitized_history.append(msg)
+
         # -------------------------------------------------------
         # CHANGE 3: Detect property search intent before RAG flow
         # -------------------------------------------------------
@@ -757,7 +767,8 @@ async def chat_about_location(request: Request, payload: ChatRequest):
             # Still save to history and update preferences — same as normal flow
             try:
                 chat_history.add_user_message(payload.question)
-                chat_history.add_ai_message(answer)
+                # Store properties in additional_kwargs so they persist in DB, but won't be in the standard text content
+                chat_history.add_message(AIMessage(content=answer, additional_kwargs={"properties": properties}))
             except Exception as mongo_err:
                 print(f"Failed to save to Mongo history: {mongo_err}")
 
@@ -780,10 +791,10 @@ async def chat_about_location(request: Request, payload: ChatRequest):
         # End of change — normal location RAG flow below is untouched
         # -------------------------------------------------------
 
-        if history_messages:
+        if sanitized_history:
             rewrite_prompt = request.app.state.prompts["rewrite"]
             retriever_query = (rewrite_prompt | llm | StrOutputParser()).invoke({
-                "chat_history": history_messages,
+                "chat_history": sanitized_history,
                 "question": payload.question
             })
         else:
@@ -802,7 +813,7 @@ async def chat_about_location(request: Request, payload: ChatRequest):
         location_prompt = request.app.state.prompts["location"]
         response = (location_prompt | llm).invoke({
             "context": context,
-            "chat_history": history_messages,
+            "chat_history": sanitized_history,
             "question": payload.question
         })
 
@@ -903,10 +914,19 @@ async def clear_chat_history(session_id: str, request: Request):
 @app.get("/chat/{session_id}/history")
 async def get_chat_history(session_id: str, request: Request):
     history = _get_history(session_id, request.app.state)
-    formatted = [
-        {"role": "human" if isinstance(msg, HumanMessage) else "assistant", "content": msg.content}
-        for msg in history.messages
-    ]
+    
+    formatted = []
+    for msg in history.messages:
+        item = {
+            "role": "human" if isinstance(msg, HumanMessage) else "assistant", 
+            "content": msg.content
+        }
+        # If properties were saved in the AI message metadata, retrieve them!
+        if isinstance(msg, AIMessage) and "properties" in msg.additional_kwargs:
+            item["properties"] = msg.additional_kwargs["properties"]
+            
+        formatted.append(item)
+        
     return {
         "session_id": session_id,
         "history": formatted,
