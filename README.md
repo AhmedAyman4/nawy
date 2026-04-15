@@ -36,7 +36,6 @@ nawy/
 │   │   └── helpers.py          # LLM code cleaning, user preference updates, etc.
 │   └── app.py                  # Legacy combined script (to be deprecated)
 ├── frontend/                   # Next.js 16 + Tailwind CSS 4 user interface
-├── project-guide.md            # Strategic project goals and roadmap
 └── README.md                   # Project overview and documentation
 ```
 
@@ -138,7 +137,7 @@ nawy/
 
 ## Data Pipeline
 
-1. **Scraping**: `01-nawy-scraping` crawls Nawy.com to extract property details, images, and descriptions.
+1. **Scraping**: `01-nawy-scraping` crawls Nawy.com to extract nearly **9,000 properties**, **1,700+ compounds**, **40+ locations**, and **600+ blogs**, along with nearly **20,000 properties** from Property Finder to ensure a robust and comprehensive dataset.
 2. **Preprocessing**: `02-data-preprocessing` cleans text, handles missing values, and prepares numeric fields for ML.
 3. **Indexing**: `03-embedding-semantic-search` converts text descriptions into vector embeddings and stores them in ChromaDB.
 4. **Modeling**: Trains an XGBoost model on the cleaned dataset for price estimation.
