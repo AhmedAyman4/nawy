@@ -120,12 +120,13 @@ export default function ChatPage() {
         if (response.ok) {
           const data = await response.json();
           if (data.history && data.history.length > 0) {
-            const historyMessages: Message[] = data.history.map((msg: { role: string; content: string; properties?: PropertyData[] }, index: number) => ({
+            const historyMessages: Message[] = data.history.map((msg: { role: string; content: string; properties?: PropertyData[]; sources?: string[]; responseTime?: number }, index: number) => ({
               id: `history_${index}`,
               type: msg.role === 'human' ? 'user' : 'bot',
               text: msg.content,
               timestamp: new Date(),
               properties: msg.properties,
+              sources: msg.sources,
             }));
             
             // Keep welcome message at the top, then add history

@@ -768,7 +768,7 @@ async def chat_about_location(request: Request, payload: ChatRequest):
             try:
                 chat_history.add_user_message(payload.question)
                 # Store properties in additional_kwargs so they persist in DB, but won't be in the standard text content
-                chat_history.add_message(AIMessage(content=answer, additional_kwargs={"properties": properties}))
+                chat_history.add_message(AIMessage(content=answer, additional_kwargs={"properties": properties, "sources": []}))
             except Exception as mongo_err:
                 print(f"Failed to save to Mongo history: {mongo_err}")
 
@@ -821,7 +821,7 @@ async def chat_about_location(request: Request, payload: ChatRequest):
 
         try:
             chat_history.add_user_message(payload.question)
-            chat_history.add_ai_message(answer)
+            chat_history.add_message(AIMessage(content=answer, additional_kwargs={"sources": sources_list}))
         except Exception as mongo_err:
             print(f"Failed to save to Mongo history: {mongo_err}")
 
@@ -921,9 +921,12 @@ async def get_chat_history(session_id: str, request: Request):
             "role": "human" if isinstance(msg, HumanMessage) else "assistant", 
             "content": msg.content
         }
-        # If properties were saved in the AI message metadata, retrieve them!
-        if isinstance(msg, AIMessage) and "properties" in msg.additional_kwargs:
-            item["properties"] = msg.additional_kwargs["properties"]
+        # If properties or sources were saved in the AI message metadata, retrieve them!
+        if isinstance(msg, AIMessage):
+            if "properties" in msg.additional_kwargs:
+                item["properties"] = msg.additional_kwargs["properties"]
+            if "sources" in msg.additional_kwargs:
+                item["sources"] = msg.additional_kwargs["sources"]
             
         formatted.append(item)
         
