@@ -187,7 +187,7 @@ export function LocationChat({ apiBaseUrl, isCompareBarVisible = false }: Locati
   const bottomOffset = isNearFooter ? (isCompareBarVisible ? 'bottom-40 sm:bottom-44' : 'bottom-32 sm:bottom-36') : (isCompareBarVisible ? 'bottom-20 sm:bottom-24' : 'bottom-6 sm:bottom-8');
 
   return (
-    <div className={`fixed ${bottomOffset} right-6 z-[100] flex flex-col items-end gap-4 pointer-events-none transition-all duration-500`}>
+    <div className={`hidden sm:flex fixed ${bottomOffset} right-6 z-[100] flex-col items-end gap-4 pointer-events-none transition-all duration-500`}>
       {/* Chat Window */}
       {isOpen && (
         <div 
