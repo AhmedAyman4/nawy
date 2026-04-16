@@ -80,6 +80,7 @@ export default function ChatPage() {
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [showSourcesId, setShowSourcesId] = useState<string | null>(null);
+  const [activeMessageId, setActiveMessageId] = useState<string | null>(null);
 
   const handleCopy = (text: string, id: string) => {
     navigator.clipboard.writeText(text);
@@ -329,7 +330,8 @@ export default function ChatPage() {
              {messages.map((m) => (
               <div
                 key={m.id}
-                className={`flex gap-2 sm:gap-4 group ${m.type === "user" ? "flex-row-reverse" : "justify-start"}`}
+                className={`flex gap-2 sm:gap-4 group cursor-pointer ${m.type === "user" ? "flex-row-reverse" : "justify-start"}`}
+                onClick={() => setActiveMessageId(activeMessageId === m.id ? null : m.id)}
               >
                 <div className={`shrink-0 w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center shadow-sm ${
                   m.type === "user" ? "bg-[#003D6B]" : "bg-[#5DBDB6]"
@@ -399,7 +401,7 @@ export default function ChatPage() {
                       className={`mt-1.5 flex items-center gap-1.5 px-2.5 py-1 rounded-full border transition-all duration-300 ${
                         copiedId === m.id 
                           ? "bg-[#5DBDB6]/10 border-[#5DBDB6]/20 text-[#5DBDB6] opacity-100 shadow-sm" 
-                          : "bg-slate-50/50 border-slate-100 text-slate-400 opacity-0 group-hover:opacity-100 hover:text-[#003D6B] hover:bg-white hover:border-slate-200 hover:shadow-sm"
+                          : `bg-slate-50/50 border-slate-100 text-slate-400 ${activeMessageId === m.id ? "opacity-100" : "opacity-0"} group-hover:opacity-100 hover:text-[#003D6B] hover:bg-white hover:border-slate-200 hover:shadow-sm`
                       }`}
                       title="Copy message text"
                     >
@@ -423,7 +425,7 @@ export default function ChatPage() {
                           className={`mt-1.5 flex items-center gap-1.5 px-2.5 py-1 rounded-full border transition-all duration-300 ${
                             showSourcesId === m.id
                               ? "bg-[#5DBDB6]/10 border-[#5DBDB6]/20 text-[#5DBDB6] opacity-100 shadow-sm"
-                              : "bg-slate-50/50 border-slate-100 text-slate-400 opacity-0 group-hover:opacity-100 hover:text-[#5DBDB6] hover:bg-white hover:border-[#5DBDB6]/20 hover:shadow-sm"
+                              : `bg-slate-50/50 border-slate-100 text-slate-400 ${activeMessageId === m.id ? "opacity-100" : "opacity-0"} group-hover:opacity-100 hover:text-[#5DBDB6] hover:bg-white hover:border-[#5DBDB6]/20 hover:shadow-sm`
                           }`}
                           title="View sources"
                         >
