@@ -175,16 +175,19 @@ async def lifespan(app: FastAPI):
         print("WARNING: GROQ_API_KEY is missing! Set it in your environment variables.")
 
     app.state.llm = ChatGroq(
-        model="llama-3.1-8b-instant",
+        # model="llama-3.1-8b-instant",
+        model="meta-llama/llama-4-scout-17b-16e-instruct",
         api_key=groq_api_key,
         temperature=0,
         max_tokens=3000
     )
 
     app.state.smart_llm = ChatGroq(          # <-- add this
-        model="llama-3.3-70b-versatile",
+        # model="llama-3.3-70b-versatile",
+        model="qwen/qwen3-32b",
         api_key=groq_api_key,
         temperature=0,
+        reasoning_effort="none",
         max_tokens=2000
     )
 
