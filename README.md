@@ -6,6 +6,21 @@ A comprehensive real-estate platform that leverages natural language chat, seman
 
 The **Nawy Property Recommender** is an end-to-end solution designed to transform how users search for real estate by replacing rigid filters with natural language queries. Beyond searching for properties, the system features an intelligent **AI Consultant** that allows users to chat and ask deep-dive questions about **locations, compounds, and community details** including up-to-date information on nearby **schools, hospitals, sports clubs, and lifestyle facilities** by combining data scraping, advanced preprocessing, vector-based semantic search, and Large Language Models (LLMs) to provide a comprehensive "digital property consultant" experience.
 
+---
+
+### The Problem & The Solution
+
+**The Challenge:**
+In the real estate industry, **Lead Qualification** is a critical bottleneck. Leads require immediate responses to maintain interest, yet sales teams often face:
+- **Availability & Capacity:** Scaling human teams to handle 24/7 inquiries is expensive and difficult to manage.
+- **Knowledge Overhead:** Training sales agents on the vast details of every project, location, and compound is time-intensive.
+- **High Turnover:** This role typically has high turnover, leading to constant retraining and lost expertise.
+
+**Solution:**
+This project focuses on **automated lead engagement and qualification**. By providing instant, expert-level knowledge on projects and properties, it ensures no lead is lost to delays. It acts as a consistent, 24/7 digital consultant that never forgets a project detail, effectively bridging the gap between user interest and sales conversion.
+
+---
+
 ## High Level Architecture
 
 ![High Level Architecture](backend/assets/diagrams/architecture/high-level-architecture-diagram-adaptive.png)
