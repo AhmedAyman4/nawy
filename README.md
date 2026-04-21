@@ -17,7 +17,7 @@ In the real estate industry, **Lead Qualification** is a critical bottleneck. Le
 - **High Turnover:** This role typically has high turnover, leading to constant retraining and lost expertise.
 
 **Solution:**
-This project focuses on **automated lead engagement and qualification**. By providing instant, expert-level knowledge on projects and properties, it ensures no lead is lost to delays. It acts as a consistent, 24/7 digital consultant that never forgets a project detail, effectively bridging the gap between user interest and sales conversion.
+This project focuses on **automated lead engagement and qualification**. By providing instant, expert-level knowledge on projects and properties, it ensures no lead is lost to delays. It acts as a consistent, 24/7 digital consultant that **dynamically builds and updates user profiles based on chat interactions**, ensuring a highly personalized search experience and bridging the gap between user interest and sales conversion.
 
 ---
 
@@ -70,6 +70,7 @@ nawy/
 ### 2. **AI Personal Consultant (RAG Chat)**
 - **Location Insights**: Chatbot that answers questions about specific areas/compounds using RAG (Retrieval-Augmented Generation).
 - **Property Comparison**: Ask the AI to compare two properties to get a detailed pros/cons analysis and recommendation.
+- **Dynamic User Profiling**: Automatically creates and refines user preference profiles during the conversation to provide increasingly relevant and tailored recommendations.
 
 **Chat Endpoint Sequence Diagram**
 
