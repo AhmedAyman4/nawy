@@ -343,7 +343,7 @@ export default function ChatPage() {
                   )}
                 </div>
                 
-                <div className={`flex flex-col ${m.type === "user" ? "items-end" : "items-start"} max-w-[88%] sm:max-w-2xl`}>
+                <div className={`flex flex-col ${m.type === "user" ? "items-end" : "items-start"} ${m.properties && m.properties.length > 0 ? "w-full max-w-[90%] sm:max-w-2xl" : "max-w-[88%] sm:max-w-2xl"}`}>
                   <div
                     className={`w-full px-4 py-3 sm:px-6 sm:py-4 rounded-2xl sm:rounded-3xl text-sm sm:text-base ${
                       m.type === "user"
@@ -357,10 +357,10 @@ export default function ChatPage() {
                       </ReactMarkdown>
                     </div>
                     {m.properties && m.properties.length > 0 && (
-                      <div className="mt-4 overflow-x-auto pb-4 custom-scrollbar">
-                        <div className="flex gap-3 min-w-max">
+                      <div className="mt-4 overflow-x-auto pb-4 custom-scrollbar -mr-4 sm:-mr-6">
+                        <div className="flex gap-3 w-max pr-4 sm:pr-6 snap-x snap-mandatory">
                           {m.properties.map((prop, idx) => (
-                            <div key={prop.id || idx} className="w-48 sm:w-56">
+                            <div key={prop.id || idx} className="w-[65vw] max-w-[240px] sm:w-[260px] snap-center shrink-0">
                               <PropertyCard 
                                 property={prop} 
                                 onClick={() => setSelectedProperty({
@@ -372,6 +372,8 @@ export default function ChatPage() {
                               />
                             </div>
                           ))}
+                          {/* spacer for right padding during scroll */}
+                          <div className="w-1 sm:w-2 shrink-0"></div>
                         </div>
                       </div>
                     )}
@@ -434,7 +436,7 @@ export default function ChatPage() {
                         </button>
                         
                         {showSourcesId === m.id && (
-                          <div className="absolute bottom-full left-0 mb-2 w-64 bg-white rounded-xl shadow-2xl border border-slate-100 p-3 z-50 animate-in fade-in slide-in-from-bottom-2">
+                          <div className="absolute bottom-full left-1/2 -translate-x-1/2 sm:left-0 sm:translate-x-0 mb-2 w-64 bg-white rounded-xl shadow-2xl border border-slate-100 p-3 z-50 animate-in fade-in slide-in-from-bottom-2">
                             <div className="flex items-center justify-between mb-2">
                               <span className="text-[10px] font-black text-[#003D6B] uppercase tracking-wider">Citations & Sources</span>
                               <button onClick={() => setShowSourcesId(null)} className="text-slate-400 hover:text-slate-600">

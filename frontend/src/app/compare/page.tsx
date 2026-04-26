@@ -317,6 +317,9 @@ function CompareContent() {
         }
 
         @media print {
+          @page {
+            margin: 1cm;
+          }
           .no-print {
             display: none !important;
           }
@@ -328,14 +331,13 @@ function CompareContent() {
             min-height: 0 !important;
             padding-top: 0 !important;
           }
-          .max-w-6xl {
+          .max-w-5xl {
             max-width: 100% !important;
             width: 100% !important;
             margin: 0 !important;
             padding: 0 !important;
           }
           .shadow-2xl, .shadow-xl, .shadow-md, .shadow-sm {
-            shadow: none !important;
             box-shadow: none !important;
             border: 1px solid #eee !important;
           }
@@ -345,7 +347,34 @@ function CompareContent() {
           .rounded-[32px], .rounded-3xl, .rounded-2xl {
             border-radius: 1rem !important;
           }
+          
+          /* Markdown specific print rules for fitting */
+          .markdown-content table {
+            width: 100% !important;
+            table-layout: fixed;
+            word-wrap: break-word;
+            page-break-inside: auto;
           }
+          .markdown-content tr {
+            page-break-inside: avoid;
+            page-break-after: auto;
+          }
+          .markdown-content th, .markdown-content td {
+            padding: 0.5rem !important;
+            font-size: 0.8rem !important;
+            word-break: break-word;
+            white-space: normal !important;
+          }
+          .markdown-content h3 {
+            page-break-after: avoid;
+            font-size: 1.25rem !important;
+            margin-top: 1.5rem !important;
+          }
+          .markdown-content p, .markdown-content li {
+            page-break-inside: avoid;
+            font-size: 0.9rem !important;
+          }
+          
           /* Ensure charts/colors print correctly */
           * {
             -webkit-print-color-adjust: exact !important;
