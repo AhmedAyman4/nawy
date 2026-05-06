@@ -1,0 +1,12 @@
+[build]
+  # The folder where Netlify should start the build
+  base = "frontend/"
+
+  # The command to run inside that folder
+  command = "npm run build"
+
+  # The directory (relative to the base) that contains the deploy-ready files
+  publish = ".next"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
