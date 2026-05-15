@@ -27,6 +27,10 @@ export function LocationChat({ apiBaseUrl, isCompareBarVisible = false }: Locati
     {
       category: "Education",
       question: "Which international schools and universities are available for residents living in El Shorouk City?"
+    },
+    {
+      category: "Property Search",
+      question: "I am looking for an apartment in New Cairo with two bedrooms and bathrooms for less than 10 million"
     }
   ]);
   const [sessionId, setSessionId] = useState<string>("");
