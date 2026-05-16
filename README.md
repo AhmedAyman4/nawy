@@ -1,10 +1,25 @@
-# Nawy Property Recommender
+<div align="center">
+
+# AI Real Estate Chat Consultant
+
+![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js&logoColor=white)
+![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)
+![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white)
+![Python](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4.0-38B2AC?logo=tailwind-css&logoColor=white)
+![LangChain](https://img.shields.io/badge/LangChain-green?logo=chainlink&logoColor=white)
+![ChromaDB](https://img.shields.io/badge/ChromaDB-Vector_Store-orange)
+![XGBoost](https://img.shields.io/badge/ML-XGBoost-blue)
+![License](https://img.shields.io/badge/License-MIT-yellow)
+[![Hugging Face Spaces](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Spaces-blue)](https://huggingface.co/spaces/ahmed-ayman/nawy-property-recommender)
 
 A comprehensive real-estate platform that leverages natural language chat, semantic search, AI-driven recommendations, and price prediction to help users find their ideal property on [Nawy.com](https://www.nawy.com/).
 
 ## Overview
 
-The **Nawy Property Recommender** is an end-to-end solution designed to transform how users search for real estate by replacing rigid filters with natural language queries. Beyond searching for properties, the system features an intelligent **AI Consultant** that allows users to chat and ask deep-dive questions about **locations, compounds, and community details** including up-to-date information on nearby **schools, hospitals, sports clubs, and lifestyle facilities** by combining data scraping, advanced preprocessing, vector-based semantic search, and Large Language Models (LLMs) to provide a comprehensive "digital property consultant" experience.
+The **AI Real Estate Chat Consultant** is an end-to-end solution designed to transform how users search for real estate by replacing rigid filters with natural language queries. Beyond searching for properties, the system features an intelligent **AI Consultant** that allows users to chat and ask deep-dive questions about **locations, compounds, and community details** including up-to-date information on nearby **schools, hospitals, sports clubs, and lifestyle facilities** by combining data scraping, advanced preprocessing, vector-based semantic search, and Large Language Models (LLMs) to provide a comprehensive "digital property consultant" experience.
+
+</div>
 
 ---
 
