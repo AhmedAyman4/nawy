@@ -8,10 +8,13 @@
 ![Python](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4.0-38B2AC?logo=tailwind-css&logoColor=white)
 ![LangChain](https://img.shields.io/badge/LangChain-green?logo=chainlink&logoColor=white)
+![LangSmith](https://img.shields.io/badge/LangSmith-Tracing-orange)
 ![ChromaDB](https://img.shields.io/badge/ChromaDB-Vector_Store-orange)
 ![XGBoost](https://img.shields.io/badge/ML-XGBoost-blue)
 ![License](https://img.shields.io/badge/License-MIT-yellow)
 [![Hugging Face Spaces](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Spaces-blue)](https://huggingface.co/spaces/ahmed-ayman/nawy-property-recommender)
+[![Netlify](https://img.shields.io/badge/Netlify-Deployed-00C7B7?logo=netlify&logoColor=white)](https://nawy.netlify.app/)
+[![Vercel](https://img.shields.io/badge/Vercel-Deployed-black?logo=vercel&logoColor=white)](https://nawyai.vercel.app/)
 
 A comprehensive real-estate platform that leverages natural language chat, semantic search, AI-driven recommendations, and price prediction to help users find their ideal property on [Nawy.com](https://www.nawy.com/).
 
@@ -36,9 +39,11 @@ This project focuses on **automated lead engagement and qualification**. By prov
 
 ---
 
-## High Level Architecture
+<h2 align="center">High Level Architecture</h2>
 
-![High Level Architecture](backend/assets/diagrams/architecture/high-level-architecture-diagram-adaptive.png)
+<p align="center">
+  <img src="backend/assets/diagrams/architecture/high-level-architecture-diagram-adaptive.png" alt="High Level Architecture" />
+</p>
 
 ---
 
