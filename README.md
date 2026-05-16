@@ -91,6 +91,8 @@ nawy/
 - **Location Insights**: Chatbot that answers questions about specific areas/compounds using RAG (Retrieval-Augmented Generation).
 - **Property Comparison**: Ask the AI to compare two properties to get a detailed pros/cons analysis and recommendation.
 - **Dynamic User Profiling**: Automatically creates and refines user preference profiles during the conversation to provide increasingly relevant and tailored recommendations.
+- **RAG Test Dataset**: A curated set of location-based Q&A used for testing RAG accuracy can be found [here](backend/assets/future-improvements/rag-test-data.md).
+
 
 **Chat Endpoint Sequence Diagram**
 
