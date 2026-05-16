@@ -39,7 +39,7 @@ This project focuses on **automated lead engagement and qualification**. By prov
 
 ---
 
-<h2 align="center">High Level Architecture</h2>
+## High Level Architecture
 
 <p align="center">
   <img src="backend/assets/diagrams/architecture/high-level-architecture-diagram-adaptive.png" alt="High Level Architecture" />
