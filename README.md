@@ -1,6 +1,10 @@
 <div align="center">
 
+<img src="frontend/public/favicon.svg" alt="AI Real Estate Chat Consultant Logo" width="64" height="64" style="margin-bottom: 0.5rem;" />
+
 # AI Real Estate Chat Consultant
+
+
 
 ![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js&logoColor=white)
 ![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)
