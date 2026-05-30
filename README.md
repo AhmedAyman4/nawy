@@ -13,7 +13,7 @@
 
 A comprehensive real-estate platform that leverages natural language chat, semantic search, AI-driven recommendations, and price prediction to help users find their ideal property on [Nawy.com](https://www.nawy.com/).
 
-<img src="backend/assets/future-improvements/nawy-property-recommender.png" alt="Nawy Property Recommender Showcase" />
+<!-- <img src="backend/assets/future-improvements/nawy-property-recommender.png" alt="Nawy Property Recommender Showcase" /> -->
 
 </div>
 
