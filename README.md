@@ -39,9 +39,79 @@ This project focuses on **automated lead engagement and qualification**. By prov
 
 ## High Level Architecture
 
-<p align="center">
-  <img src="backend/assets/diagrams/architecture/high-level-architecture-diagram-adaptive.png" alt="High Level Architecture" />
-</p>
+```mermaid
+graph TD
+    %% Global Styling with Much Larger Fonts
+    classDef larger font-size:26px,font-weight:bold,padding:20px;
+    classDef storage fill:#dfd,stroke:#333,font-size:22px,padding:15px;
+    classDef database fill:#ffd,stroke:#333,font-size:22px,padding:15px;
+    classDef logic fill:#fff,stroke:#333,stroke-width:2px,font-size:22px,padding:15px;
+
+    %% Client Layer
+    User((User / Frontend)):::larger -->|HTTP Requests| API
+
+    %% Main Logic Layer
+    subgraph FASTAPI["FASTAPI BACKEND SYSTEM"]
+        direction TB
+        API[FastAPI Gateway]:::larger
+        
+        API -->|1. Startup| Lifespan[Lifespan Manager]:::logic
+        Lifespan -->|Loads| Data[(nawy_properties_cleaned.csv)]:::storage
+        Lifespan -->|Loads| XGB[XGBoost & Label Encoder]:::storage
+        Lifespan -->|Initializes| Embed[Qwen Embedding Model]:::logic
+
+        %% Endpoints
+        API -->|/recommend| RecEngine[Recommendation Engine]:::logic
+        API -->|/chat| RAG[Location RAG Chat]:::logic
+        API -->|/compare| Compare[Comparison Engine]:::logic
+        API -->|/predict-price| PricePred[Price Predictor]:::logic
+        API -->|/filter| Filter[Standard Filter]:::logic
+        
+        %% Internal Logic
+        RAG -->|History Management| MongoHistory[MongoDBChatMessageHistory]:::logic
+        RAG -->|Every N Turns| PrefLogic[maybe_update_preferences]:::logic
+        
+        RecEngine -->|Executes| PyFilter[LLM Python Code Executor]:::logic
+    end
+
+    %% Storage & AI Layer
+    subgraph AI["AI & DATA INFRASTRUCTURE"]
+        direction TB
+        RecEngine -->|Similarity Search| ChromaProp[(ChromaDB: Properties)]:::storage
+        RecEngine -->|Dynamic Code Gen| Groq[[Groq: Llama 3.1]]:::larger
+        
+        RAG -->|Context Retrieval| ChromaLoc[(ChromaDB: Locations)]:::storage
+        RAG -->|Query Rewriting| Groq
+        
+        Compare -->|Property Specs| Data
+        Compare -->|Location Retrieval| ChromaLoc
+        Compare -->|Synthesis| Groq
+
+        PricePred -->|Log1p + Feature Eng| XGB
+    end
+
+    %% Persistence Layer
+    subgraph PERSIST["PERSISTENCE LAYER (MONGODB)"]
+        MongoHistory <-->|Read/Write| ChatCol[(Collection: chat_history)]:::database
+        PrefLogic <-->|Upsert Profile| PrefCol[(Collection: user_preferences)]:::database
+    end
+
+    %% External Monitoring & Prompts
+    subgraph OBSERV["OBSERVABILITY & PROMPT HUB"]
+        Groq <-->|Traceable| LangSmith[LangSmith Client]:::logic
+        LangSmith -.->|Pull Prompts| RecEngine
+        LangSmith -.->|Pull Prompts| RAG
+        LangSmith -.->|Pull Prompts| PrefLogic
+        LangSmith -.->|Pull Prompts| Compare
+    end
+
+    %% Individual Style Overrides
+    style API fill:#f9f,stroke:#333,stroke-width:4px
+    style Groq fill:#69f,stroke:#333,stroke-width:4px,color:#fff
+    style FASTAPI fill:#f5f5f5,stroke:#333,stroke-width:2px
+    style AI fill:#f0f8ff,stroke:#333,stroke-width:2px
+    style PERSIST fill:#fff9e6,stroke:#333,stroke-dasharray: 5 5
+```
 
 ---
 
@@ -83,7 +153,49 @@ nawy/
 
 **Natural Language Search Sequence Diagram**
 
-<img src="backend/assets/diagrams/search/natural-language-search-sequence-diagram.png" alt="Natural Language Search Sequence Diagram" width="500" />
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Client
+    participant API as FastAPI (recommend)
+    participant VDB as ChromaDB (Vectorstore)
+    participant LLM as Groq (Llama 3.1)
+    participant DF as Pandas DataFrame
+
+    Client->>API: POST /recommend (query, top_k)
+    
+    rect rgb(240, 240, 240)
+    Note over API, VDB: Semantic Search Phase
+    API->>VDB: similarity_search(query, k=top_k)
+    VDB-->>API: List of Documents (Metadata)
+    API->>API: Extract IDs from Metadata
+    end
+
+    rect rgb(230, 245, 255)
+    Note over API, DF: Data Retrieval Phase
+    API->>DF: Filter rows where ID in extracted_ids
+    DF-->>API: recommended_df (Sub-dataframe)
+    end
+
+    rect rgb(255, 245, 230)
+    Note over API, LLM: Intelligent Filtering Phase
+    API->>LLM: Send query + column schemas
+    LLM-->>API: Return Python code string (df_filtered)
+    end
+
+    rect rgb(240, 255, 240)
+    Note over API: Execution & Fallback
+    API->>API: exec(generated_code)
+    alt Execution Success
+        API->>API: Use df_filtered
+    else Execution Error / Empty Result
+        API->>API: Fallback to original recommended_df
+    end
+    end
+
+    API->>API: Apply Pagination (page, size)
+    API-->>Client: Return JSON (data, total, debug)
+```
 
 ### 2. **AI Personal Consultant (RAG Chat)**
 - **Location Insights**: Chatbot that answers questions about specific areas/compounds using RAG (Retrieval-Augmented Generation).
@@ -94,11 +206,111 @@ nawy/
 
 **Chat Endpoint Sequence Diagram**
 
-<img src="backend/assets/diagrams/chat/chat-endpoint-sequence-diagram.png" alt="Chat Endpoint Sequence Diagram" width="500" />
+```mermaid
+sequenceDiagram
+    autonumber
+    
+    participant User
+    participant API
+    participant MongoDB
+    participant LangSmith
+    participant Groq as Groq (Smart LLM)
+    participant ChromaLoc
+
+    rect rgb(240, 248, 255)
+    Note over User, API: Request Phase
+    User->>API: POST /chat (question, session_id)
+    API->>API: _get_history(session_id)
+    alt Mongo Available
+        API->>MongoDB: Initialize MongoDBChatMessageHistory
+        MongoDB-->>API: history_messages
+    else Mongo Unavailable (Fallback)
+        Note over API: Use local_chat_histories (In-Memory)
+    end
+    end
+
+    rect rgb(255, 235, 235)
+    Note over API, Groq: Intent Detection (New Logic)
+    API->>LangSmith: Pull "is_property_search_prompt"
+    API->>Groq: Detect search intent
+    Groq-->>API: is_property_search (True/False)
+    
+    opt If is_property_search == True
+        API->>API: get_recommendations(payload)
+        Note right of API: Executes Vector Search + LLM Filtering
+        API->>User: ChatResponse (answer + properties list)
+    end
+    end
+
+    rect rgb(255, 249, 230)
+    Note over API, Groq: Standard RAG Flow (If search intent is False)
+    alt history_messages exists
+        API->>LangSmith: Pull "chat_history_rewrite_prompt"
+        API->>Groq: Rewrite question based on history
+        Groq-->>API: retriever_query
+    else No history
+        Note over API: retriever_query = original question
+    end
+
+    API->>ChromaLoc: Similarity Search (k=10)
+    ChromaLoc-->>API: retrieved_docs (context)
+    
+    API->>LangSmith: Pull "property_location_prompt"
+    API->>Groq: Generate answer (context + history + question)
+    Groq-->>API: answer
+    end
+
+    rect rgb(230, 255, 230)
+    Note over API, MongoDB: Persistence & Safe Preferences
+    API->>API: Save User & AI messages (Mongo or Local)
+    
+    par Async Preference Update (Safe)
+        API->>API: maybe_update_preferences_safe()
+        Note right of API: If turn_counter % 3 == 0
+        API->>LangSmith: Pull "extract_preferences_from_history_prompt"
+        API->>Groq: Extract profile from new messages
+        Groq-->>API: Extracted JSON
+        API->>API: _safe_save_preference_doc()
+        Note right of API: Upserts to MongoDB or local_preferences
+    end
+    end
+
+    API-->>User: ChatResponse (answer, session_id, history_length)
+```
 
 **Compare Parallel RAG sequence diagram**
 
-<img src="backend/assets/diagrams/compare/Compare-Parallel-RAG-sequence-diagram.png" alt="Compare Parallel RAG sequence diagram" width="500" />
+```mermaid
+sequenceDiagram
+    participant Client
+    participant API as FastAPI /compare
+    participant DF as app.state.df (CSV)
+    participant VS as location_vectorstore (ChromaDB)
+    participant LLM as Groq LLM (Llama-3.1)
+
+    Client->>API: POST /compare (id1, id2)
+    
+    rect rgb(240, 240, 240)
+    Note over API, VS: RunnableParallel Phase
+    
+    par Property Data Retrieval
+        API->>DF: Filter rows where ID is in [id1, id2]
+        DF-->>API: Return property specs (m2, Beds, Price, etc.)
+        API->>API: format into "property_context" string
+    and Location Context Retrieval
+        API->>VS: similarity_search (query context for id1 & id2)
+        VS-->>API: Return relevant document chunks
+        API->>API: format into "location_context" string
+    end
+    end
+
+    API->>API: Pull 'compare_multi_context_prompt_v1' from LangSmith
+    
+    API->>LLM: Send Prompt (Property Context + Location Context)
+    LLM-->>API: Return Structured Comparison Analysis
+    
+    API-->>Client: JSON Response (id1, id2, comparison_text)
+```
 
 ### 3. **Smart Price Prediction**
 - **XGBoost Engine**: Predicts property prices based on location, size, property type, and features.
@@ -106,7 +318,42 @@ nawy/
 
 **Price Prediction Sequence Diagram**
 
-<img src="backend/assets/diagrams/prediction/price-prediction-sequence-diagram.png" alt="Price Prediction Sequence Diagram" width="500" />
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Client
+    participant API as FastAPI (predict_price)
+    participant Encoder as Location Encoder (Joblib)
+    participant Model as XGBoost Model (Joblib)
+    participant DF as Reference DataFrame
+
+    Client->>API: POST /predict-price (location, m2, beds, etc.)
+    
+    rect rgb(240, 240, 240)
+    Note over API, DF: Feature Engineering Phase
+    API->>API: Calculate 'is_luxury' (m2 > 200)
+    API->>API: Apply Log Transformation: log1p(m2)
+    API->>Encoder: transform(location)
+    Encoder-->>API: Label Encoded Location
+    API->>DF: Get Mean/Std price for location context
+    API->>API: Compute Ratios (bed_bath_ratio, m2_per_bed)
+    end
+
+    rect rgb(230, 245, 255)
+    Note over API, Model: Inference Phase
+    API->>API: Align features with model_features_in
+    API->>Model: predict(df_single)
+    Model-->>API: log_prediction (Float)
+    end
+
+    rect rgb(240, 255, 240)
+    Note over API: Post-Processing
+    API->>API: Inverse Log Transform: expm1(log_prediction)
+    API->>API: Format currency string (EGP)
+    end
+
+    API-->>Client: Return PricePredictionResponse
+```
 
 ### 4. **Modern Web UI**
 - **Responsive Design**: Optimized for mobile and desktop.
