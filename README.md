@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="frontend/public/favicon.svg" alt="AI Real Estate Chat Consultant Logo" width="64" height="64" style="margin-bottom: 0.5rem;" />
+<img src="frontend/public/favicon.svg" alt="AI Real Estate Chat Consultant Logo" width="48" height="48" style="margin-bottom: 0.5rem;" />
 
 # AI Real Estate Chat Consultant
 
